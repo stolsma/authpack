@@ -5,6 +5,7 @@
 ### Under development!!! By far not stable yet!!!
 
 TODO:
+
   - Implement more tests, check latest OAuth2 draft and compare to current implementation 
   - Add more documentation
   - Add example(s)
