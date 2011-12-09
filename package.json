@@ -1,0 +1,30 @@
+{
+  "name": "authpack",
+  "description": "Package of distributed client and server OAuth2 API's",
+  "version": "0.0.1",
+  "author": "Tolsma Telematica Consultancy <code at tolsma.net>",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/stolsma/authpack"
+  },
+  "keywords": ["distributed", "oauth2", "service", "authorization", "authentication", "OpenID Connect"],
+  "dependencies": {
+    "qs": "0.3.2",
+    "request": "2.2.x >=2.2.9",
+    "serializer": ">=0.0.2"
+  },
+  "devDependencies": {
+    "director": "1.0.x >=1.0.6",
+    "union": "0.1.x >=0.1.4",
+    "vows": "0.5.x >=0.5.10"
+  },
+  "main": "./lib/authpack",
+  "bin": {
+  },
+  "scripts": { 
+    "test": "vows test/**/*-test.js --isolate --spec"
+  },
+  "engines": {
+    "node": "0.4.x || 0.5.x || 0.6.x"
+  }
+}
