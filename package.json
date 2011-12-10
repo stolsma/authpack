@@ -2,7 +2,11 @@
   "name": "authpack",
   "description": "Package of distributed client and server OAuth2 API's",
   "version": "0.0.1",
-  "author": "Tolsma Telematica Consultancy <code at tolsma.net>",
+  "author": "Tolsma Telematica Consultancy <code@tolsma.net>",
+  "maintainers": [ "stolsma <code@tolsma.net>" ],
+  "contributors": [
+    { "name": "Sander Tolsma", "email": "code@tolsma.net" }
+  ],
   "repository": {
     "type": "git",
     "url": "https://github.com/stolsma/authpack"
