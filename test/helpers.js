@@ -9,10 +9,10 @@
  */
 
 var qs = require('qs'),
-    request = require('request'),
     union = require('union');
     
 var authpack = require('../lib/authpack'),
+    request = authpack.utils.request,
     helpers = exports;
 
 
