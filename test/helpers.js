@@ -102,12 +102,12 @@ helpers.performLogout = function(callback) {
 
 //
 //
-// OAuth2 Authorization Code Flow helpers
+// OAuth2 Authorization Flow helpers
 //
 //
 
 /**
- * Do the first step in the Authorization Code Flow, 
+ * Do the first step in the Authorization Flow, 
  */
 helpers.performAuthorizationGet = function(options, callback, expectLogin) {
   var reqOptions = {
@@ -129,19 +129,11 @@ helpers.performAuthorizationGet = function(options, callback, expectLogin) {
 }
 
 /**
- * Do the first two steps in the Authorization Code Flow
+ * Do the next steps in the Authorization Code Flow
  */
-helpers.performCodeFlowAuthorization = function(options, callback) {
-  var firstOptions = {
-    response_type: 'code',
-    client_id: 'test',
-    redirect_uri: 'http://localhost:9090/foo',
-    scope: 'test',
-    state: options.state
-  };
-  
+helpers.performCodeFlowAuthorization = function(userId, options, callback) {
   var reqOptions = {
-    url: 'http://localhost:9090/oauth2/authorize?' + qs.stringify(firstOptions) + '&' + options.userId,
+    url: 'http://localhost:9090/oauth2/authorize?' + qs.stringify(options) + '&' + userId,
     method: 'POST',
     headers: {
       'Content-Type': 'application/x-www-form-urlencoded'
@@ -189,6 +181,39 @@ helpers.performAccessTokenRequest = function(options, callback) {
   });
 }
 
+
+/**
+ * Do the next steps in the Implicit Grant Flow
+ */
+helpers.performImplicitGrantAuthorization = function(userId, options, callback) {
+  var reqOptions = {
+    url: 'http://localhost:9090/oauth2/authorize?' + qs.stringify(options) + '&' + userId,
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded'
+    },
+    body: qs.stringify({
+      next : 'http://localhost:9090/foo',
+      allow : true
+    })
+  };
+  
+  request(reqOptions, function(err, res, body) {
+    var params = qs.parse(res.request.uri.hash.slice(1));
+    if (err) callback (err);
+    if (res.statusCode === 200 && body === 'hello world get') {
+      callback(null, params);
+    } else {
+      callback('Wrong response on request (statuscode=' + res.statusCode + ' body=' + body + ')');
+    }
+  });
+}
+
+//
+//
+// Support functions
+//
+//
 
 function getUserId(body) {
   var partial = 'x_user_id=',

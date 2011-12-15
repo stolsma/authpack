@@ -12,14 +12,13 @@ var assert = require('assert'),
     vows = require('vows');
 
 var helpers = require('../helpers'),
+    credentials = {username: 'sander', password: 'test'},
     oauth2;
 
 vows.describe('OAuth2/authorization-server').addBatch({
   "When using the authorization server": {
     topic: function() {
       var self = this,
-          credentials = {username: 'sander', password: 'test'};
-          
       oauth2 = helpers.createOAuth2();
       helpers.startServer(oauth2, helpers.createRouter(oauth2));
       oauth2.authenticationServer.users.add('sander', credentials , function(err, id, userData) {
@@ -61,8 +60,8 @@ vows.describe('OAuth2/authorization-server').addBatch({
           assert.isString(userId);
         },
         "give authorization and get code": {
-          topic: function(userId, codeParameters, credentials, oauth2) {
-            helpers.performCodeFlowAuthorization({userId: userId, state: codeParameters.state}, this.callback);
+          topic: function(userId, codeParameters) {
+            helpers.performCodeFlowAuthorization(userId, codeParameters, this.callback);
           },
           "request is handled correctly": function(err, params) {
             assert.isTrue(!err);
@@ -83,6 +82,63 @@ vows.describe('OAuth2/authorization-server').addBatch({
     }
   }
 }).addBatch({
+  "Start implicit grant flow": {
+    topic: function() {
+      var self = this,
+          codeParameters = {
+            response_type: 'token',
+            client_id: 'test',
+            redirect_uri: 'http://localhost:9090/foo',
+            scope: 'test',
+            state: 'statetest'
+          };
+      helpers.performLogout(function(err) {
+        helpers.performAuthorizationGet(codeParameters, function(err, loginPage) {
+          loginPage = (loginPage) ? null : 'No login page returned';
+          self.callback(err || loginPage, codeParameters);
+        }, true);
+      });
+    },
+    "check if login page is presented": function(err, codeParameters) {
+      assert.isTrue(!err);
+    },
+    "do login and get authorization": {
+      topic: function(codeParameters) {
+        var self = this;
+        helpers.performLogin(credentials, function(err) {
+          if (err) self.callback(err);
+          helpers.performAuthorizationGet(codeParameters, self.callback);
+        });
+      },
+      "check if authorization page is presented": function(err, userId) {
+        assert.isTrue(!err);
+        assert.isString(userId);
+      },
+      "give authorization and get code": {
+        topic: function(userId, codeParameters, credentials, oauth2) {
+          helpers.performImplicitGrantAuthorization(userId, codeParameters, this.callback);
+        },
+        "request is handled correctly": function(err, result) {
+          assert.isTrue(!err);
+        },
+        "'access_token' is returned": function(err, result) {
+          assert.isString(result.access_token);
+        },
+        "'token_type' is `bearer`": function(err, result) {
+          assert.equal(result.token_type, 'bearer');
+        },
+        "'expires_in' = 3600": function(err, result) {
+          assert.equal(result.expires_in, 3600);
+        },
+        "correct 'scope' is returned": function(err, result) {
+          assert.equal(result.scope, 'test');
+        },
+        "correct 'state' is returned": function(err, result) {
+          assert.equal(result.state, 'statetest');
+        }
+      }
+    }
+  }
 }).export(module);
 
 
