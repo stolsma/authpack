@@ -67,7 +67,7 @@ helpers.startServer = function(oauth2, router) {
 //
 
 helpers.performLogin = function(userData, callback) {
-  var options = {
+  var reqOptions = {
     url: 'http://localhost:9090/oauth2/login',
     method: 'POST',
     headers: {
@@ -79,7 +79,25 @@ helpers.performLogin = function(userData, callback) {
       password: userData.password
     })
   };
-  request(options, callback);
+  request(reqOptions, callback);
+}
+
+helpers.performLogout = function(callback) {
+  var reqOptions = {
+    url: 'http://localhost:9090/oauth2/logout?' + qs.stringify({
+      next : 'http://localhost:9090/foo'
+    }),
+    method: 'GET',
+  };
+  
+  request(reqOptions, function(err, res, body) {
+    if (err) callback (err);
+    if (res.statusCode === 200 && body === 'hello world get') {
+      callback(null);
+    }else {
+      callback('Wrong response on request (statuscode=' + res.statusCode + ' body=' + body + ')');
+    }
+  });
 }
 
 //
@@ -99,7 +117,7 @@ helpers.performAuthorizationGet = function(options, callback) {
   request(reqOptions, function(err, res, body) {
     if (err) callback (err);
     if (res.statusCode === 200) {
-      callback(err, getUserId(body));
+      callback(null, getUserId(body));
     }else {
       callback('Wrong response on request (statuscode=' + res.statusCode + ' body=' + body + ')');
     }
