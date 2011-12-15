@@ -91,7 +91,7 @@ helpers.performLogout = function(callback) {
   };
   
   request(reqOptions, function(err, res, body) {
-    if (err) callback (err);
+    if (err) return callback(err);
     if (res.statusCode === 200 && body === 'hello world get') {
       callback(null);
     }else {
@@ -109,17 +109,21 @@ helpers.performLogout = function(callback) {
 /**
  * Do the first step in the Authorization Code Flow, 
  */
-helpers.performAuthorizationGet = function(options, callback) {
+helpers.performAuthorizationGet = function(options, callback, expectLogin) {
   var reqOptions = {
     url: 'http://localhost:9090/oauth2/authorize?' + qs.stringify(options),
     method: 'GET',
   };
   request(reqOptions, function(err, res, body) {
-    if (err) callback (err);
+    if (err) return callback(err);
     if (res.statusCode === 200) {
-      callback(null, getUserId(body));
+      if (expectLogin) {
+        var partial = '<button type="submit">Login</button>';
+        return callback(null, body.indexOf(partial) !== -1);
+      };
+      return callback(null, getUserId(body));
     }else {
-      callback('Wrong response on request (statuscode=' + res.statusCode + ' body=' + body + ')');
+      return callback('Wrong response on request (statuscode=' + res.statusCode + ' body=' + body + ')');
     }
   });
 }
@@ -175,7 +179,7 @@ helpers.performAccessTokenRequest = function(options, callback) {
   };
   
   request(reqOptions, function(err, res, body) {
-    if (err) callback(err);
+    if (err) return callback(err);
     try {
       var result = JSON.parse(body);
     } catch (error) {
@@ -187,7 +191,7 @@ helpers.performAccessTokenRequest = function(options, callback) {
 
 
 function getUserId(body) {
-  var partial = 'x_user_id=';
+  var partial = 'x_user_id=',
       location = body.indexOf(partial);
   
   body = body.slice(location);

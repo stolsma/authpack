@@ -11,50 +11,58 @@
 var assert = require('assert'),
     vows = require('vows');
 
-var helpers = require('../helpers');
+var helpers = require('../helpers'),
+    oauth2;
 
 vows.describe('OAuth2/authorization-server').addBatch({
   "When using the authorization server": {
     topic: function() {
-      var oauth2 = helpers.createOAuth2();
+      var self = this,
+          credentials = {username: 'sander', password: 'test'};
+          
+      oauth2 = helpers.createOAuth2();
       helpers.startServer(oauth2, helpers.createRouter(oauth2));
-      return oauth2;
+      oauth2.authenticationServer.users.add('sander', credentials , function(err, id, userData) {
+        self.callback(err, credentials, oauth2);
+      });
     },
-    "it should be properly created": function(oauth2) {
+    "it should be properly created": function(credentials, oauth2) {
       // TODO Implement authorizationServer creation test
       assert.isTrue(!!oauth2);
     },
-    "add user": {
-      topic: function(oauth2) {
+    "start authorization code flow": {
+      topic: function(credentials, oauth2) {
         var self = this,
-            users = oauth2.authenticationServer.users;
-            
-        users.add('sander', {username: 'sander', password: 'test'}, function(err, id, userData) {
-            helpers.performLogin(userData, self.callback);
-        });
+            codeParameters = {
+              response_type: 'code',
+              client_id: 'test',
+              redirect_uri: 'http://localhost:9090/foo',
+              scope: 'test',
+              state: 'statetest'
+            };
+        helpers.performAuthorizationGet(codeParameters, function(err, loginPage) {
+          loginPage = (loginPage) ? null : 'No login page returned';
+          self.callback(err || loginPage, codeParameters);
+        }, true);
       },
-      "and check if login is accepted": function(err, res, body) {
+      "check if login page is presented": function(err, codeParameters) {
         assert.isTrue(!err);
-        assert.equal(res.statusCode, 200);
-        assert.equal(body, 'hello world get');
       },
-      "get authorization from user": {
-        topic: function(res, body, oauth2) {
-          helpers.performAuthorizationGet({
-            response_type: 'code',
-            client_id: 'test',
-            redirect_uri: 'http://localhost:9090/foo',
-            scope: 'test',
-            state: 'statetest'
-          }, this.callback);
+      "do login and get authorization": {
+        topic: function(codeParameters, credentials, oauth2) {
+          var self = this;
+          helpers.performLogin(credentials, function(err) {
+            if (err) self.callback(err);
+            helpers.performAuthorizationGet(codeParameters, self.callback);
+          });
         },
-        "and check if authorization page is given": function(err, userId) {
+        "check if authorization page is presented": function(err, userId) {
           assert.isTrue(!err);
           assert.isString(userId);
         },
-        "do 'code flow' authorization": {
-          topic: function(userId) {
-            helpers.performCodeFlowAuthorization({userId: userId, state: 'statetest'}, this.callback);
+        "give authorization and get code": {
+          topic: function(userId, codeParameters, credentials, oauth2) {
+            helpers.performCodeFlowAuthorization({userId: userId, state: codeParameters.state}, this.callback);
           },
           "request is handled correctly": function(err, params) {
             assert.isTrue(!err);
@@ -65,15 +73,16 @@ vows.describe('OAuth2/authorization-server').addBatch({
           "'code' is returned": function(err, params) {
             assert.isTrue(!!params.code);
           },
-          "and then do 'acces token' request": accessTokenRequestTest({
-            "and then do 'refresh_token' request": accessTokenRequestTest({
-              "and then do 2nd 'refresh_token' request": accessTokenRequestTest()
+          "do 'acces token' request": accessTokenRequestTest({
+            "do 'refresh_token' request": accessTokenRequestTest({
+              "do 2nd 'refresh_token' request": accessTokenRequestTest()
             })
           })
         }
       }
     }
   }
+}).addBatch({
 }).export(module);
 
 
