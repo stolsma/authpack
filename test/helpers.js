@@ -109,19 +109,36 @@ helpers.performLogout = function(callback) {
 /**
  * Do the first step in the Authorization Flow, 
  */
-helpers.performAuthorizationGet = function(options, callback, expectLogin) {
+helpers.performAuthorization = function(options, expect, method, callback) {
   var reqOptions = {
     url: 'http://localhost:9090/oauth2/authorize?' + qs.stringify(options),
-    method: 'GET',
+    method: method,
   };
   request(reqOptions, function(err, res, body) {
     if (err) return callback(err);
     if (res.statusCode === 200) {
-      if (expectLogin) {
+      if (expect === 'login') {
+        // the test expects a login form returned
         var partial = '<button type="submit">Login</button>';
         return callback(null, body.indexOf(partial) !== -1);
-      };
-      return callback(null, getUserId(body));
+        
+      } else if (expect === 'authorize') {
+        // the test expects an authorize form returned
+        return callback(null, getAuthKey(body));
+        
+      } else if (expect === 'error') {
+        // the test expects that there is an error msg returned
+         var params = qs.parse(res.request.uri.query);
+        if (body === 'hello world get') {
+          return callback(null, params);
+        } else {
+          return callback('Wrong body returned', params);
+        }
+        
+      } else {
+        // wrong expect parameter
+        return callback('Wrong helpers.performAuthorizationGet expect parameter!');
+      }
     }else {
       return callback('Wrong response on request (statuscode=' + res.statusCode + ' body=' + body + ')');
     }
@@ -131,9 +148,9 @@ helpers.performAuthorizationGet = function(options, callback, expectLogin) {
 /**
  * Do the next steps in the Authorization Code Flow
  */
-helpers.performCodeFlowAuthorization = function(userId, options, callback) {
+helpers.performCodeFlowAuthorization = function(auth_key, options, callback) {
   var reqOptions = {
-    url: 'http://localhost:9090/oauth2/authorize?' + qs.stringify(options) + '&' + userId,
+    url: 'http://localhost:9090/oauth2/authorize?' + qs.stringify(options) + auth_key,
     method: 'POST',
     headers: {
       'Content-Type': 'application/x-www-form-urlencoded'
@@ -215,8 +232,8 @@ helpers.performImplicitGrantAuthorization = function(userId, options, callback) 
 //
 //
 
-function getUserId(body) {
-  var partial = 'x_user_id=',
+function getAuthKey(body) {
+  var partial = '&auth_key=',
       location = body.indexOf(partial);
   
   body = body.slice(location);

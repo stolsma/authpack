@@ -39,10 +39,10 @@ vows.describe('OAuth2/authorization-server').addBatch({
               scope: 'test',
               state: 'statetest'
             };
-        helpers.performAuthorizationGet(codeParameters, function(err, loginPage) {
+        helpers.performAuthorization(codeParameters, 'login', 'GET', function(err, loginPage) {
           loginPage = (loginPage) ? null : 'No login page returned';
           self.callback(err || loginPage, codeParameters);
-        }, true);
+        });
       },
       "check if login page is presented": function(err, codeParameters) {
         assert.isTrue(!err);
@@ -52,16 +52,16 @@ vows.describe('OAuth2/authorization-server').addBatch({
           var self = this;
           helpers.performLogin(credentials, function(err) {
             if (err) self.callback(err);
-            helpers.performAuthorizationGet(codeParameters, self.callback);
+            helpers.performAuthorization(codeParameters, 'authorize', 'GET', self.callback);
           });
         },
-        "check if authorization page is presented": function(err, userId) {
+        "check if authorization page is presented": function(err, auth_key) {
           assert.isTrue(!err);
-          assert.isString(userId);
+          assert.isString(auth_key);
         },
         "give authorization and get code": {
-          topic: function(userId, codeParameters) {
-            helpers.performCodeFlowAuthorization(userId, codeParameters, this.callback);
+          topic: function(auth_key, codeParameters) {
+            helpers.performCodeFlowAuthorization(auth_key, codeParameters, this.callback);
           },
           "request is handled correctly": function(err, params) {
             assert.isTrue(!err);
@@ -93,10 +93,10 @@ vows.describe('OAuth2/authorization-server').addBatch({
             state: 'statetest'
           };
       helpers.performLogout(function(err) {
-        helpers.performAuthorizationGet(codeParameters, function(err, loginPage) {
+        helpers.performAuthorization(codeParameters, 'login', 'GET', function(err, loginPage) {
           loginPage = (loginPage) ? null : 'No login page returned';
           self.callback(err || loginPage, codeParameters);
-        }, true);
+        });
       });
     },
     "check if login page is presented": function(err, codeParameters) {
@@ -107,7 +107,7 @@ vows.describe('OAuth2/authorization-server').addBatch({
         var self = this;
         helpers.performLogin(credentials, function(err) {
           if (err) self.callback(err);
-          helpers.performAuthorizationGet(codeParameters, self.callback);
+          helpers.performAuthorization(codeParameters, 'authorize', 'GET', self.callback);
         });
       },
       "check if authorization page is presented": function(err, userId) {
@@ -137,6 +137,114 @@ vows.describe('OAuth2/authorization-server').addBatch({
           assert.equal(result.state, 'statetest');
         }
       }
+    }
+  }
+}).addBatch({
+  "Call authorization endpoint (GET) when 'response_type' is omitted": {
+    topic: function() {
+      var self = this,
+          codeParameters = {
+            client_id: 'test',
+            redirect_uri: 'http://localhost:9090/foo',
+            scope: 'test',
+            state: 'statetest'
+          };
+      helpers.performLogout(function(err) {
+        helpers.performAuthorization(codeParameters, 'error', 'GET', function(err, param) {
+          self.callback(err, param, codeParameters);
+        });
+      });
+    },
+    "check if correct 'error' type is presented": function(err, param, codeParameters) {
+      assert.isTrue(!err);
+      assert.equal(param.error, 'unsupported_response_type');
+    },
+    "check if 'error_description' is presented": function(err, param, codeParameters) {
+      assert.isString(param.error_description);
+    },
+    "correct 'state' is returned": function(err, param, codeParameters) {
+      assert.equal(param.state, codeParameters.state);
+    }
+  },
+  "Call authorization endpoint (GET) when 'response_type' is unknown": {
+    topic: function() {
+      var self = this,
+          codeParameters = {
+            response_type: 'testing',
+            client_id: 'test',
+            redirect_uri: 'http://localhost:9090/foo',
+            scope: 'test',
+            state: 'statetest'
+          };
+      helpers.performLogout(function(err) {
+        helpers.performAuthorization(codeParameters, 'error', 'GET', function(err, param) {
+          self.callback(err, param, codeParameters);
+        });
+      });
+    },
+    "check if correct 'error' type is presented": function(err, param, codeParameters) {
+      assert.isTrue(!err);
+      assert.equal(param.error, 'unsupported_response_type');
+    },
+    "check if 'error_description' is presented": function(err, param, codeParameters) {
+      assert.isString(param.error_description);
+    },
+    "correct 'state' is returned": function(err, param, codeParameters) {
+      assert.equal(param.state, codeParameters.state);
+    }
+  }
+}).addBatch({
+  "Call authorization endpoint (POST) after authorization when 'response_type' is omitted": {
+    topic: function() {
+      var self = this,
+          codeParameters = {
+            client_id: 'test',
+            redirect_uri: 'http://localhost:9090/foo',
+            scope: 'test',
+            state: 'statetest'
+          };
+      helpers.performLogout(function(err) {
+        helpers.performCodeFlowAuthorization('', codeParameters, function(err, param) {
+          self.callback(err, param, codeParameters);
+        });
+      });
+    },
+    "check if correct 'error' type is presented": function(err, param, codeParameters) {
+      assert.isTrue(!err);
+      assert.equal(param.error, 'unsupported_response_type');
+    },
+    "check if 'error_description' is presented": function(err, param, codeParameters) {
+      assert.isString(param.error_description);
+    },
+    "correct 'state' is returned": function(err, param, codeParameters) {
+      assert.equal(param.state, codeParameters.state);
+    }
+  },
+  "Call authorization endpoint (POST) after authorization when 'response_type' is unknown": {
+    topic: function() {
+      var self = this,
+          codeParameters = {
+            response_type: 'testing',
+            client_id: 'test',
+            redirect_uri: 'http://localhost:9090/foo',
+            scope: 'test',
+            state: 'statetest'
+          };
+      helpers.performLogout(function(err) {
+        helpers.performCodeFlowAuthorization('', codeParameters, function(err, param) {
+          self.callback(err, param, codeParameters);
+        });
+      });
+    },
+    "check if correct 'error' type is presented": function(err, param, codeParameters) {
+      assert.isTrue(!err);
+      assert.equal(param.error, 'unsupported_response_type');
+    },
+    "check if 'error_description' is presented": function(err, param, codeParameters) {
+      assert.isString(param.error_description);
+    },
+    "correct 'state' is returned": function(err, param, codeParameters) {
+      assert.equal(param.state, codeParameters.state);
     }
   }
 }).export(module);
