@@ -21,7 +21,7 @@ vows.describe('OAuth2/authorization-server').addBatch({
       var self = this,
       oauth2 = helpers.createOAuth2();
       helpers.startServer(oauth2, helpers.createRouter(oauth2));
-      oauth2.authenticationServer.users.add('sander', credentials , function(err, id, userData) {
+      oauth2.authentication.users.add('sander', credentials , function(err, id, userData) {
         self.callback(err, credentials, oauth2);
       });
     },

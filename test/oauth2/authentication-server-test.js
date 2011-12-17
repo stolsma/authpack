@@ -27,7 +27,7 @@ vows.describe('OAuth2/authentication-server').addBatch({
     "add user": {
       topic: function(oauth2) {
         var self = this,
-            users = oauth2.authenticationServer.users,
+            users = oauth2.authentication.users,
             credentials = {username: 'sander', password: 'test'};
             
         users.add('sander', credentials, function(err, id, userData) {

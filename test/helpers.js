@@ -18,7 +18,8 @@ var authpack = require('../lib/authpack'),
 
 helpers.createOAuth2 = function() {
   var oauth2 = authpack.oauth2.init({
-        authenticationServer: {},
+        authentication: {},
+        authorization: {},
         authorizationServer: {},
         resourceServer: {}
       });
