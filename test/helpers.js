@@ -84,19 +84,29 @@ helpers.performLogin = function(userData, callback) {
 
 helpers.performLogout = function(callback) {
   var reqOptions = {
-    url: 'http://localhost:9090/oauth2/logout?' + qs.stringify({
-      next : 'http://localhost:9090/foo'
-    }),
+    url: 'http://localhost:9090/oauth2/logout',
     method: 'GET',
   };
   
   request(reqOptions, function(err, res, body) {
     if (err) return callback(err);
-    if (res.statusCode === 200 && body === 'hello world get') {
+    if (res.statusCode === 200 && body === 'Logged out!') {
       callback(null);
     }else {
       callback('Wrong response on request (statuscode=' + res.statusCode + ' body=' + body + ')');
     }
+  });
+}
+
+//
+//
+// General Authorization functions
+//
+//
+
+helpers.createClient = function(oauth, name, redirect_uri, info, next) {
+  oauth2.authorizationServer.clients.create(name, redirect_uri, info, function(data) {
+    return next(data);
   });
 }
 
