@@ -275,7 +275,7 @@ helpers.performAccessTokenRequest = function(options, callback) {
  */
 helpers.performImplicitGrantAuthorization = function(userId, options, callback) {
   var reqOptions = {
-    url: 'http://localhost:9090/oauth2/authorize?' + qs.stringify(options) + '&' + userId,
+    url: 'http://localhost:9090/oauth2/authorize?' + qs.stringify(options) + userId,
     method: 'POST',
     headers: {
       'Content-Type': 'application/x-www-form-urlencoded'
