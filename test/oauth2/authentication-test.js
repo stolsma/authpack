@@ -1,5 +1,5 @@
 /**
- * authentication-server-test.js: Test the OAuth2 AuthenticationServer class.
+ * authentication-test.js: Test the OAuth2 Authentication class and endpoints.
  *
  * Copyright 2011 TTC/Sander Tolsma
  * See LICENSE file for license

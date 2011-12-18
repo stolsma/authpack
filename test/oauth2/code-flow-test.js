@@ -1,5 +1,5 @@
 /**
- * authorization-server-test.js: Test the OAuth2 AuthorizationServer class.
+ * code-flow-test.js: Test the OAuth2 Code Flow.
  *
  * Copyright 2011 TTC/Sander Tolsma
  * See LICENSE file for license
