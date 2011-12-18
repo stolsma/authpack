@@ -39,6 +39,18 @@ helpers.createRouter = function(oauth2) {
     this.res.writeHead(200, { 'Content-Type': 'text/plain' });
     this.res.end('hello world post');
   });
+  
+  router.get('/login', function(next) {
+    oauth2.authentication.loginEndpoint(this.req, this.res, next);
+  });
+
+  router.post('/login', function(next) {
+    oauth2.authentication.loginEndpoint(this.req, this.res, next);
+  });
+
+  router.get('/logout', function(next) {
+    oauth2.authentication.logoutEndpoint(this.req, this.res, next);
+  });
 
   return router;
 }
@@ -67,15 +79,33 @@ helpers.startServer = function(oauth2, router) {
 //
 //
 
-helpers.performLogin = function(userData, callback) {
+
+helpers.performLogin = function(callback) {
   var reqOptions = {
-    url: 'http://localhost:9090/oauth2/login',
+    url: 'http://localhost:9090/login?test=test',
+    method: 'GET'
+  };
+  
+  request(reqOptions, function(err, res, body) {
+    if (err) return callback(err);
+    if (res.statusCode === 200) {
+      var partial = '<button type="submit">Login</button>';
+      return callback(null, body.indexOf(partial) !== -1, getAuthenticationKey(body));
+    }else {
+      return callback('Wrong response on request (statuscode=' + res.statusCode + ' body=' + body + ')');
+    }
+  });
+}
+
+
+helpers.performLoginPost = function(userData, auth_key, callback) {
+  var reqOptions = {
+    url: 'http://localhost:9090/login?test=test' + auth_key,
     method: 'POST',
     headers: {
       'Content-Type': 'application/x-www-form-urlencoded'
     },
     body: qs.stringify({
-      next : 'http://localhost:9090/foo',
       username: userData.username,
       password: userData.password
     })
@@ -85,7 +115,7 @@ helpers.performLogin = function(userData, callback) {
 
 helpers.performLogout = function(callback) {
   var reqOptions = {
-    url: 'http://localhost:9090/oauth2/logout',
+    url: 'http://localhost:9090/logout',
     method: 'GET',
   };
   
@@ -120,22 +150,34 @@ helpers.createClient = function(oauth, name, redirect_uri, info, next) {
 /**
  * Do the first step in the Authorization Flow, 
  */
-helpers.performAuthorization = function(options, expect, method, callback) {
+helpers.performAuthorization = function(options, expect, method, callback, auth_key, credentials) {
   var reqOptions = {
     url: 'http://localhost:9090/oauth2/authorize?' + qs.stringify(options),
     method: method,
   };
+  
+  if (expect === 'authorize') {
+    reqOptions.url += auth_key;
+    reqOptions.headers = {
+      'Content-Type': 'application/x-www-form-urlencoded'
+    };
+    reqOptions.body = qs.stringify({
+      username: credentials.username,
+      password: credentials.password
+    });
+  }
+  
   request(reqOptions, function(err, res, body) {
     if (err) return callback(err);
     if (res.statusCode === 200) {
       if (expect === 'login') {
         // the test expects a login form returned
         var partial = '<button type="submit">Login</button>';
-        return callback(null, body.indexOf(partial) !== -1);
+        return callback(null, body.indexOf(partial) !== -1, getAuthenticationKey(body));
         
       } else if (expect === 'authorize') {
         // the test expects an authorize form returned
-        return callback(null, getAuthKey(body));
+        return callback(null, getAuthorizationKey(body));
         
       } else if (expect === 'error') {
         // the test expects that there is an error msg returned
@@ -243,8 +285,18 @@ helpers.performImplicitGrantAuthorization = function(userId, options, callback) 
 //
 //
 
-function getAuthKey(body) {
-  var partial = '&auth_key=',
+function getAuthenticationKey(body) {
+  var partial = '&authentication=',
+      location = body.indexOf(partial);
+  
+  body = body.slice(location);
+  location = body.indexOf('"');
+  body = body.slice(0, location);
+  return body;
+}
+
+function getAuthorizationKey(body) {
+  var partial = '&authorization=',
       location = body.indexOf(partial);
   
   body = body.slice(location);

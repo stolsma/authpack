@@ -39,21 +39,17 @@ vows.describe('OAuth2/authorization-server').addBatch({
               scope: 'test',
               state: 'statetest'
             };
-        helpers.performAuthorization(codeParameters, 'login', 'GET', function(err, loginPage) {
+        helpers.performAuthorization(codeParameters, 'login', 'GET', function(err, loginPage, auth_key) {
           loginPage = (loginPage) ? null : 'No login page returned';
-          self.callback(err || loginPage, codeParameters);
+          self.callback(err || loginPage, codeParameters, auth_key);
         });
       },
       "check if login page is presented": function(err, codeParameters) {
         assert.isTrue(!err);
       },
       "do login and get authorization": {
-        topic: function(codeParameters, credentials, oauth2) {
-          var self = this;
-          helpers.performLogin(credentials, function(err) {
-            if (err) self.callback(err);
-            helpers.performAuthorization(codeParameters, 'authorize', 'GET', self.callback);
-          });
+        topic: function(codeParameters, auth_key, credentials, oauth2) {
+          helpers.performAuthorization(codeParameters, 'authorize', 'POST', this.callback, auth_key, credentials);
         },
         "check if authorization page is presented": function(err, auth_key) {
           assert.isTrue(!err);
@@ -93,9 +89,9 @@ vows.describe('OAuth2/authorization-server').addBatch({
             state: 'statetest'
           };
       helpers.performLogout(function(err) {
-        helpers.performAuthorization(codeParameters, 'login', 'GET', function(err, loginPage) {
+        helpers.performAuthorization(codeParameters, 'login', 'GET', function(err, loginPage, auth_key) {
           loginPage = (loginPage) ? null : 'No login page returned';
-          self.callback(err || loginPage, codeParameters);
+          self.callback(err || loginPage, codeParameters, auth_key);
         });
       });
     },
@@ -103,12 +99,8 @@ vows.describe('OAuth2/authorization-server').addBatch({
       assert.isTrue(!err);
     },
     "do login and get authorization": {
-      topic: function(codeParameters) {
-        var self = this;
-        helpers.performLogin(credentials, function(err) {
-          if (err) self.callback(err);
-          helpers.performAuthorization(codeParameters, 'authorize', 'GET', self.callback);
-        });
+      topic: function(codeParameters, auth_key) {
+        helpers.performAuthorization(codeParameters, 'authorize', 'POST', this.callback, auth_key, credentials);
       },
       "check if authorization page is presented": function(err, userId) {
         assert.isTrue(!err);
