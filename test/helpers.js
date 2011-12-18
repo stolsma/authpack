@@ -8,7 +8,8 @@
  * @docauthor TTC/Sander Tolsma
  */
 
-var qs = require('qs'),
+var assert = require('assert'),
+    qs = require('qs'),
     union = require('union');
     
 var authpack = require('../lib/authpack'),
@@ -72,6 +73,32 @@ helpers.startServer = function(oauth2, router) {
   return server;
 }
 
+
+helpers.startTestServer = function(extraContext) {
+  var credentials = {username: 'sander', password: 'test'};
+  var context = {
+    topic: function() {
+      var self = this,
+          oauth2 = helpers.createOAuth2();
+      helpers.startServer(oauth2, helpers.createRouter(oauth2));
+      oauth2.authentication.users.add('sander', credentials , function(err, id, userData) {
+        oauth2.authorizationServer.clients.create('client', 'confidential',  ['http://localhost:9090/foo'], 'This is the test client',  function(client) {
+           self.callback(err, credentials, client, oauth2);
+        });
+      });
+    },
+    "it should be properly created": function(credentials, client, oauth2) {
+      // TODO Implement authorizationServer creation test
+      assert.isTrue(!!oauth2);
+    }
+  }
+  
+  if (extraContext) {
+    helpers.mixin(context, extraContext);
+  }
+  
+  return context
+};
 
 //
 //

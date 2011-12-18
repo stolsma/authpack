@@ -11,30 +11,21 @@ var assert = require('assert'),
 var helpers = require('../helpers');
 
 vows.describe('OAuth2/response-type-error').addBatch({
-  "When using the authorization server": {
-    topic: function() {
-      var oauth2 = helpers.createOAuth2();
-      helpers.startServer(oauth2, helpers.createRouter(oauth2));
-      this.callback(null, oauth2);
-    },
-    "it should be properly created": function(oauth2) {
-      // TODO Implement authorizationServer creation test
-      assert.isTrue(!!oauth2);
-    },
+  "When using the authorization server": helpers.startTestServer({
     "Call authorization endpoint (GET) when 'response_type' is omitted": testResponseType('GET'),
     "Call authorization endpoint (GET) when 'response_type' is unknown": testResponseType('GET', 'testing'),
     "Call authorization endpoint (POST) when 'response_type' is omitted": testResponseType('POST'),
     "Call authorization endpoint (POST) when 'response_type' is unknown": testResponseType('POST', 'testing')
-  }
+  })
 }).export(module);
 
 function testResponseType(method, response_type) {
   return {
-    topic: function() {
+    topic: function(credentials, client, oauth2) {
       var self = this,
           codeParameters = {
-            client_id: 'test',
-            redirect_uri: 'http://localhost:9090/foo',
+            client_id: client.id,
+            redirect_uri: client.redirect_uris[0],
             scope: 'test',
             state: 'statetest'
           };

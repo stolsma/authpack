@@ -8,30 +8,17 @@
 var assert = require('assert'),
     vows = require('vows');
 
-var helpers = require('../helpers'),
-    credentials = {username: 'sander', password: 'test'};
+var helpers = require('../helpers');
 
 vows.describe('OAuth2/code-flow').addBatch({
-  "When using the authorization server": {
-    topic: function() {
-      var self = this,
-          oauth2 = helpers.createOAuth2();
-      helpers.startServer(oauth2, helpers.createRouter(oauth2));
-      oauth2.authentication.users.add('sander', credentials , function(err, id, userData) {
-        self.callback(err, credentials, oauth2);
-      });
-    },
-    "it should be properly created": function(credentials, oauth2) {
-      // TODO Implement authorizationServer creation test
-      assert.isTrue(!!oauth2);
-    },
+  "When using the authorization server": helpers.startTestServer({
     "start authorization code flow": {
-      topic: function(credentials, oauth2) {
+      topic: function(credentials, client, oauth2) {
         var self = this,
             codeParameters = {
               response_type: 'code',
-              client_id: 'test',
-              redirect_uri: 'http://localhost:9090/foo',
+              client_id: client.id,
+              redirect_uri: client.redirect_uris[0],
               scope: 'test',
               state: 'statetest'
             };
@@ -44,7 +31,7 @@ vows.describe('OAuth2/code-flow').addBatch({
         assert.isTrue(!err);
       },
       "do login and get authorization": {
-        topic: function(codeParameters, auth_key, credentials, oauth2) {
+        topic: function(codeParameters, auth_key, credentials) {
           helpers.getAuthorizationPage(codeParameters, '', auth_key, credentials, this.callback);
         },
         "check if authorization page is presented": function(err, auth_key) {
@@ -72,7 +59,7 @@ vows.describe('OAuth2/code-flow').addBatch({
         }
       }
     }
-  }
+  })
 }).export(module);
 
 
