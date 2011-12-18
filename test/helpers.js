@@ -199,7 +199,11 @@ helpers.getLoginPage = function(options, expect, method, callback) {
           return callback('Wrong body returned', params);
         }
       }
-    }else {
+    } if (res.statusCode === 400 && body.indexOf(expect) !== -1) {
+      // the test expects that there is an 'invalid_request' error returned
+      data = JSON.parse(body);
+      return callback(null, data);
+    } else {
       return callback('Wrong response on request (statuscode=' + res.statusCode + ' body=' + body + ')');
     }
   });
