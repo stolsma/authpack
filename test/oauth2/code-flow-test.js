@@ -11,7 +11,7 @@ var assert = require('assert'),
 var helpers = require('../helpers'),
     credentials = {username: 'sander', password: 'test'};
 
-vows.describe('OAuth2/authorization-server').addBatch({
+vows.describe('OAuth2/code-flow').addBatch({
   "When using the authorization server": {
     topic: function() {
       var self = this,

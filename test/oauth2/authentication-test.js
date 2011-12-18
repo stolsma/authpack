@@ -13,7 +13,7 @@ var assert = require('assert'),
 
 var helpers = require('../helpers');
 
-vows.describe('OAuth2/authentication-server').addBatch({
+vows.describe('OAuth2/authentication').addBatch({
   "When using the authentication server": {
     topic: function() {
       var oauth2 = helpers.createOAuth2();
