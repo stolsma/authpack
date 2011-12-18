@@ -148,49 +148,67 @@ helpers.createClient = function(oauth, name, redirect_uri, info, next) {
 //
 
 /**
- * Do the first step in the Authorization Flow, 
+ * Do the first step in the Authorization Flow, get the login page.
  */
-helpers.performAuthorization = function(options, expect, method, callback, auth_key, credentials) {
+helpers.getLoginPage = function(options, expect, method, callback) {
   var reqOptions = {
     url: 'http://localhost:9090/oauth2/authorize?' + qs.stringify(options),
     method: method,
   };
   
-  if (expect === 'authorize') {
-    reqOptions.url += auth_key;
-    reqOptions.headers = {
-      'Content-Type': 'application/x-www-form-urlencoded'
-    };
-    reqOptions.body = qs.stringify({
-      username: credentials.username,
-      password: credentials.password
-    });
-  }
-  
   request(reqOptions, function(err, res, body) {
     if (err) return callback(err);
     if (res.statusCode === 200) {
-      if (expect === 'login') {
+      if (expect !== 'error') {
         // the test expects a login form returned
         var partial = '<button type="submit">Login</button>';
         return callback(null, body.indexOf(partial) !== -1, getAuthenticationKey(body));
-        
-      } else if (expect === 'authorize') {
-        // the test expects an authorize form returned
-        return callback(null, getAuthorizationKey(body));
-        
-      } else if (expect === 'error') {
+      } else {
         // the test expects that there is an error msg returned
-         var params = qs.parse(res.request.uri.query);
+        var params = qs.parse(res.request.uri.query);
         if (body === 'hello world get') {
           return callback(null, params);
         } else {
           return callback('Wrong body returned', params);
         }
-        
+      }
+    }else {
+      return callback('Wrong response on request (statuscode=' + res.statusCode + ' body=' + body + ')');
+    }
+  });
+}
+
+
+/**
+ * Do the 2nd step in the Authorization Flow, get the authorization page 
+ */
+helpers.getAuthorizationPage = function(options, expect, auth_key, credentials, callback) {
+  var reqOptions = {
+    url: 'http://localhost:9090/oauth2/authorize?' + qs.stringify(options) + auth_key,
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded'
+    },
+    body: qs.stringify({
+      username: credentials.username,
+      password: credentials.password
+    })
+  }
+  
+  request(reqOptions, function(err, res, body) {
+    if (err) return callback(err);
+    if (res.statusCode === 200) {
+      if (expect !== 'error') {
+        // the test expects an authorize form returned
+        return callback(null, getAuthorizationKey(body));
       } else {
-        // wrong expect parameter
-        return callback('Wrong helpers.performAuthorizationGet expect parameter!');
+        // the test expects that there is an error msg returned
+        var params = qs.parse(res.request.uri.query);
+        if (body === 'hello world get') {
+          return callback(null, params);
+        } else {
+          return callback('Wrong body returned', params);
+        }
       }
     }else {
       return callback('Wrong response on request (statuscode=' + res.statusCode + ' body=' + body + ')');
