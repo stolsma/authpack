@@ -1,5 +1,6 @@
 /**
- * integrated.js: A integrated Authorization, Authentication and Resource server example.
+ * integrated.js: A integrated Authorization, Authentication and Resource server
+ * example.
  *
  * Copyright 2011 TTC/Sander Tolsma
  * See LICENSE file for license
@@ -17,11 +18,12 @@ var oauth2 = require('../lib/authpack').oauth2.init({
       resourceServer: {}
     });
 
-var credentials = {username: 'sander', password: 'test'};
-oauth2.authentication.users.add('sander', credentials , function(err, id, userData) {
-  oauth2.authorizationServer.clients.create('client', 'confidential',  ['http://localhost:9090/foo'], 'This is the test client',  function(client) {
-     console.log('userdata: ', userData);
-     console.log('client.id: ', client.id);
+var cred = {username: 'sander', password: 'test'};
+oauth2.authentication.users.add('sander', cred, function(err, id, userData) {
+  oauth2.authorizationServer.clients.create('client', 'confidential',
+  ['http://localhost:9090/foo'], 'This is the test client', function(client) {
+    console.log('userdata: ', userData);
+    console.log('client.id: ', client.id);
   });
 });
 
@@ -29,13 +31,12 @@ oauth2.authentication.users.add('sander', credentials , function(err, id, userDa
 var router = oauth2.createRouter();
 
 router.get('/foo', function () {
-  this.res.writeHead(200, { 'Content-Type': 'text/plain' })
+  this.res.writeHead(200, { 'Content-Type': 'text/plain' });
   this.res.end('hello world get\n');
 });
 
-
 router.post('/foo', function () {
-  this.res.writeHead(200, { 'Content-Type': 'text/plain' })
+  this.res.writeHead(200, { 'Content-Type': 'text/plain' });
   this.res.end('hello world post\n');
 });
 
@@ -66,4 +67,5 @@ var server = union.createServer({
 
 server.listen(9090);
 console.log('Integrated example with all OAuth2 endpoints running on 9090');
-console.log("http://development:9090/login?next=http://development:9090/foo&state=statetest");
+console.log("http://development:9090/login?" +
+  "next=http://development:9090/foo&state=statetest");
