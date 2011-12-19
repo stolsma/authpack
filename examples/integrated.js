@@ -1,6 +1,5 @@
 /**
- * integrated.js: A integrated Authorization, Authentication and Resource server
- * example.
+ * integrated.js: A integrated Authorization, Authentication and Resource server example.
  *
  * Copyright 2011 TTC/Sander Tolsma
  * See LICENSE file for license
@@ -67,5 +66,4 @@ var server = union.createServer({
 
 server.listen(9090);
 console.log('Integrated example with all OAuth2 endpoints running on 9090');
-console.log("http://development:9090/login?" +
-  "next=http://development:9090/foo&state=statetest");
+console.log("http://development:9090/login?next=http://development:9090/foo&state=statetest");
