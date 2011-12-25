@@ -65,8 +65,15 @@ vows.describe('OAuth2/code-flow').addBatch({
 
 function accessTokenRequestTest(extraContext) {
   var context = {
-    topic: function(result) {
-      helpers.performAccessTokenRequest({code: result.code || result.refresh_token}, this.callback);
+    topic: function(result, dummy, codeParameters) {
+      var self = this;
+      var params = {
+        code: result.code || result.refresh_token,
+        client_id :codeParameters.client_id
+      };
+      helpers.performAccessTokenRequest(params, function(err, result){
+        self.callback(err, result, null, codeParameters);
+      });
     },
     "request is handled correctly": function(err, result) {
       assert.isTrue(!err);
@@ -92,5 +99,5 @@ function accessTokenRequestTest(extraContext) {
     helpers.mixin(context, extraContext);
   }
   
-  return context
+  return context;
 };

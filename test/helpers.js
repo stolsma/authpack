@@ -285,6 +285,7 @@ helpers.performAccessTokenRequest = function(options, callback) {
     body: qs.stringify({
       grant_type: 'authorization_code',
       code: options.code,
+      client_id: options.client_id,
       redirect_uri: 'http://localhost:9090/foo'
     })
   };
