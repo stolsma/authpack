@@ -53,7 +53,7 @@ function testRedirectUri(method, client_id, redirect_uri) {
       });
     },
     "check if correct 'error' type is presented": function(err, param, codeParameters) {
-      assert.isTrue(!err);
+      assert.isNull(err);
       assert.equal(param.error, 'invalid_request');
     },
     "check if 'error_description' is presented": function(err, param, codeParameters) {

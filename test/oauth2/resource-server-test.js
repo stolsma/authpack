@@ -16,7 +16,7 @@ function createTokenData(eSecret, sSecret) {
   sSecret = sSecret || 'ThisIsASigningSecret';
   
   var srlzr = serializer.createSecureSerializer(eSecret, sSecret),
-      tokenData = ['user_id', 'client_id', +new Date, 'extra_data'];
+      tokenData = ['user_id', 'client_id', +new Date];
   
   return {
     eSecret: eSecret,
@@ -77,7 +77,6 @@ vows.describe('OAuth2/resource-server').addBatch({
         assert.equal(req.token.user, tokenData.data[0]);
         assert.equal(req.token.client, tokenData.data[1]);
         assert.equal(req.token.date, tokenData.data[2]);
-        assert.equal(req.token.data, tokenData.data[3]);
       }
     },
     "call checkToken with HeaderToken": {
@@ -95,7 +94,6 @@ vows.describe('OAuth2/resource-server').addBatch({
         assert.equal(req.token.user, tokenData.data[0]);
         assert.equal(req.token.client, tokenData.data[1]);
         assert.equal(req.token.date, tokenData.data[2]);
-        assert.equal(req.token.data, tokenData.data[3]);
       }
     }
   }

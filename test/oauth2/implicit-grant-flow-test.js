@@ -28,14 +28,14 @@ vows.describe('OAuth2/implicit-grant-flow').addBatch({
         });
       },
       "check if login page is presented": function(err, codeParameters) {
-        assert.isTrue(!err);
+        assert.isNull(err);
       },
       "do login and get authorization": {
         topic: function(codeParameters, auth_key, credentials) {
           helpers.getAuthorizationPage(codeParameters, '', auth_key, credentials, this.callback);
         },
         "check if authorization page is presented": function(err, userId) {
-          assert.isTrue(!err);
+          assert.isNull(err);
           assert.isString(userId);
         },
         "give authorization and get code": {
@@ -43,7 +43,7 @@ vows.describe('OAuth2/implicit-grant-flow').addBatch({
             helpers.performImplicitGrantAuthorization(userId, codeParameters, this.callback);
           },
           "request is handled correctly": function(err, result) {
-            assert.isTrue(!err);
+            assert.isNull(err);
           },
           "'access_token' is returned": function(err, result) {
             assert.isString(result.access_token);

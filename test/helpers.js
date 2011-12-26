@@ -283,7 +283,7 @@ helpers.performAccessTokenRequest = function(options, callback) {
       'Content-Type': 'application/x-www-form-urlencoded'
     },
     body: qs.stringify({
-      grant_type: 'authorization_code',
+      grant_type: options.grant_type,
       code: options.code,
       client_id: options.client_id,
       redirect_uri: 'http://localhost:9090/foo'
@@ -292,14 +292,15 @@ helpers.performAccessTokenRequest = function(options, callback) {
   
   request(reqOptions, function(err, res, body) {
     if (err) return callback(err);
+    var result;
     try {
-      var result = JSON.parse(body);
+      result = JSON.parse(body);
     } catch (error) {
       err = error;
     }
     callback(err, result);
   });
-}
+};
 
 
 /**

@@ -28,14 +28,14 @@ vows.describe('OAuth2/code-flow').addBatch({
         });
       },
       "check if login page is presented": function(err, codeParameters) {
-        assert.isTrue(!err);
+        assert.isNull(err);
       },
       "do login and get authorization": {
         topic: function(codeParameters, auth_key, credentials) {
           helpers.getAuthorizationPage(codeParameters, '', auth_key, credentials, this.callback);
         },
         "check if authorization page is presented": function(err, auth_key) {
-          assert.isTrue(!err);
+          assert.isNull(err);
           assert.isString(auth_key);
         },
         "give authorization and get code": {
@@ -43,7 +43,7 @@ vows.describe('OAuth2/code-flow').addBatch({
             helpers.performCodeFlowAuthorization(auth_key, codeParameters, this.callback);
           },
           "request is handled correctly": function(err, params) {
-            assert.isTrue(!err);
+            assert.isNull(err);
           },
           "correct 'state' is returned": function(err, params) {
             assert.equal(params.state, 'statetest');
@@ -68,6 +68,7 @@ function accessTokenRequestTest(extraContext) {
     topic: function(result, dummy, codeParameters) {
       var self = this;
       var params = {
+        grant_type: 'authorization_code',
         code: result.code || result.refresh_token,
         client_id :codeParameters.client_id
       };
@@ -76,7 +77,7 @@ function accessTokenRequestTest(extraContext) {
       });
     },
     "request is handled correctly": function(err, result) {
-      assert.isTrue(!err);
+      assert.isNull(err);
     },
     "'access_token' is returned": function(err, result) {
       assert.isString(result.access_token);

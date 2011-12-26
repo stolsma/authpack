@@ -35,7 +35,7 @@ function testResponseType(method, response_type) {
       });
     },
     "check if correct 'error' type is presented": function(err, param, codeParameters) {
-      assert.isTrue(!err);
+      assert.isNull(err);
       assert.equal(param.error, 'unsupported_response_type');
     },
     "check if 'error_description' is presented": function(err, param, codeParameters) {
