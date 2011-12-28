@@ -26,7 +26,7 @@
   "bin": {
   },
   "scripts": { 
-    "test": "vows test/**/*-test.js --isolate --spec"
+    "test": "node_modules/.bin/vows test/**/*-test.js --isolate --spec"
   },
   "engines": {
     "node": "0.4.x || 0.5.x || 0.6.x"
