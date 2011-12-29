@@ -18,6 +18,7 @@ vows.describe('OAuth2/code-flow').addBatch({
             codeParameters = {
               response_type: 'code',
               client_id: client.id,
+              client_secret: client.secret,
               redirect_uri: client.redirect_uris[0],
               scope: 'test',
               state: 'statetest'
@@ -70,7 +71,8 @@ function accessTokenRequestTest(extraContext) {
       var params = {
         grant_type: 'authorization_code',
         code: result.code || result.refresh_token,
-        client_id :codeParameters.client_id
+        client_id: codeParameters.client_id,
+        client_secret:  codeParameters.client_secret
       };
       helpers.performAccessTokenRequest(params, function(err, result){
         self.callback(err, result, null, codeParameters);

@@ -23,6 +23,7 @@ function testGrantType(grant_type) {
       var self = this,
           grantParameters = {
             client_id: client.id,
+            client_secret: client.secret,
             redirect_uri: client.redirect_uris[0],
             scope: 'test'
           };

@@ -202,7 +202,7 @@ helpers.getLoginPage = function(options, expect, method, callback) {
       }
     } if (res.statusCode === 400 && body.indexOf(expect) !== -1) {
       // the test expects that there is an 'invalid_request' error returned
-      data = JSON.parse(body);
+      var data = JSON.parse(body);
       return callback(null, data);
     } else {
       return callback('Wrong response on request (statuscode=' + res.statusCode + ' body=' + body + ')');
@@ -273,33 +273,48 @@ helpers.performCodeFlowAuthorization = function(auth_key, options, callback) {
       callback('Wrong response on request (statuscode=' + res.statusCode + ' body=' + body + ')');
     }
   });
-}
+};
 
-
+/**
+ * Perform an Access Token Request
+ */
 helpers.performAccessTokenRequest = function(options, callback) {
+  var body = {
+    grant_type: options.grant_type,
+    redirect_uri: 'http://localhost:9090/foo'
+  };
+  var headers = {
+    'Content-Type': 'application/x-www-form-urlencoded'
+  };
+  
+  if (options.code) body.code = options.code;
+  if (options.refresh_token) body.refresh_token = options.refresh_token;
+  
+  // select client authentication type
+  if (options.basic) {
+    headers["Authorization"] = "Basic "+ new Buffer(options.client_id + ":" + options.client_secret).toString("base64");
+  } else {
+    body.client_id = options.client_id;
+    body.client_secret = options.client_secret;
+  }
+  
   var reqOptions = {
     url: 'http://localhost:9090/oauth2/access_token',
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/x-www-form-urlencoded'
-    },
-    body: qs.stringify({
-      grant_type: options.grant_type,
-      code: options.code,
-      client_id: options.client_id,
-      redirect_uri: 'http://localhost:9090/foo'
-    })
+    headers: headers,
+    body: qs.stringify(body)
   };
-  
+
   request(reqOptions, function(err, res, body) {
     if (err) return callback(err);
     var result;
+
     try {
       result = JSON.parse(body);
     } catch (error) {
       err = error;
     }
-    callback(err, result);
+    callback(err, result, res.statusCode, res.headers);
   });
 };
 
