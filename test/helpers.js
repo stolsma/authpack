@@ -310,7 +310,6 @@ helpers.performAccessTokenRequest = function(options, callback) {
   request(reqOptions, function(err, res, body) {
     if (err) return callback(err);
     var result;
-
     try {
       result = JSON.parse(body);
     } catch (error) {

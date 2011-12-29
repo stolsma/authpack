@@ -52,9 +52,9 @@ vows.describe('OAuth2/code-flow').addBatch({
           "'code' is returned": function(err, params) {
             assert.isTrue(!!params.code);
           },
-          "do 'acces token' request": accessTokenRequestTest({
-            "do 'refresh_token' request": accessTokenRequestTest({
-              "do 2nd 'refresh_token' request": accessTokenRequestTest()
+          "do 'acces token' request": accessTokenRequestTest('code', {
+            "do 'refresh_token' request": accessTokenRequestTest('refresh', {
+              "do 2nd 'refresh_token' request": accessTokenRequestTest('refresh')
             })
           })
         }
@@ -64,16 +64,25 @@ vows.describe('OAuth2/code-flow').addBatch({
 }).export(module);
 
 
-function accessTokenRequestTest(extraContext) {
+function accessTokenRequestTest(type, extraContext) {
   var context = {
     topic: function(result, dummy, codeParameters) {
       var self = this;
       var params = {
-        grant_type: 'authorization_code',
-        code: result.code || result.refresh_token,
         client_id: codeParameters.client_id,
         client_secret:  codeParameters.client_secret
       };
+      
+      if (type === 'code') {
+        params.grant_type = 'authorization_code';
+        params.code = result.code;
+      }
+      
+      if (type === 'refresh') {
+        params.grant_type = 'refresh_token';
+        params.refresh_token = result.refresh_token;
+      }
+        
       helpers.performAccessTokenRequest(params, function(err, result){
         self.callback(err, result, null, codeParameters);
       });
