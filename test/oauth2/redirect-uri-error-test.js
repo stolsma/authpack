@@ -12,23 +12,47 @@ var helpers = require('../helpers');
 
 vows.describe('OAuth2/redirect-uri-error').addBatch({
   "When using the authorization server": helpers.startTestServer({
-    "Call authorization endpoint (GET) when 'redirect_uri' & 'client_id' are omitted": testRedirectUri('GET', 'empty', 'empty'),
-    "Call authorization endpoint (GET) when 'redirect_uri' is omitted": testRedirectUri('GET', null, 'empty'),
-    "Call authorization endpoint (GET) when 'client_id' is omitted": testRedirectUri('GET', 'empty', null),
-    "Call authorization endpoint (GET) when 'redirect_uri' is unknown": testRedirectUri('GET', null, 'testing'),
-    "Call authorization endpoint (GET) when 'client_id' is unknown": testRedirectUri('GET', 'testing', null),
+    "with confidential client call auth endpoint (GET) when 'redirect_uri' & 'client_id' are omitted":
+      testRedirectUri('GET', 'empty', 'empty', true),
+    "with confidential client call auth endpoint (GET) when 'client_id' is omitted": 
+      testRedirectUri('GET', 'empty', null, true),
+    "with confidential client call auth endpoint (GET) when 'redirect_uri' is unknown": 
+      testRedirectUri('GET', null, 'testing', true),
+    "with confidential client call auth endpoint (GET) when 'client_id' is unknown": 
+      testRedirectUri('GET', 'testing', null, true),
 
-    "Call authorization endpoint (POST) when 'redirect_uri' & 'client_id' are omitted": testRedirectUri('POST', 'empty', 'empty'),
-    "Call authorization endpoint (POST) when 'redirect_uri' is omitted": testRedirectUri('POST', null, 'empty'),
-    "Call authorization endpoint (POST) when 'client_id' is omitted": testRedirectUri('POST', 'empty', null),
-    "Call authorization endpoint (POST) when 'redirect_uri' is unknown": testRedirectUri('POST', null, 'testing'),
-    "Call authorization endpoint (POST) when 'client_id' is unknown": testRedirectUri('POST', 'testing', null)
+    "with confidential client call auth endpoint (POST) when 'redirect_uri' & 'client_id' are omitted": 
+      testRedirectUri('POST', 'empty', 'empty', true),
+    "with confidential client call auth endpoint (POST) when 'client_id' is omitted": 
+      testRedirectUri('POST', 'empty', null, true),
+    "with confidential client call auth endpoint (POST) when 'redirect_uri' is unknown": 
+      testRedirectUri('POST', null, 'testing', true),
+    "with confidential client call auth endpoint (POST) when 'client_id' is unknown": 
+      testRedirectUri('POST', 'testing', null, true),
+
+    "with public client call auth endpoint (GET) when 'redirect_uri' & 'client_id' are omitted":
+      testRedirectUri('GET', 'empty', 'empty', false),
+    "with public client call auth endpoint (GET) when 'client_id' is omitted":  
+      testRedirectUri('GET', 'empty', null, false),
+    "with public client call auth endpoint (GET) when 'redirect_uri' is unknown":
+      testRedirectUri('GET', null, 'testing', false),
+    "with public client call auth endpoint (GET) when 'client_id' is unknown":
+      testRedirectUri('GET', 'testing', null, false),
+
+    "with public client call auth endpoint (POST) when 'redirect_uri' & 'client_id' are omitted":
+      testRedirectUri('POST', 'empty', 'empty', false),
+    "with public client call auth endpoint (POST) when 'client_id' is omitted":
+      testRedirectUri('POST', 'empty', null, false),
+    "with public client call auth endpoint (POST) when 'redirect_uri' is unknown":
+      testRedirectUri('POST', null, 'testing', false),
+    "with public client call auth endpoint (POST) when 'client_id' is unknown":
+      testRedirectUri('POST', 'testing', null, false)
   })
 }).export(module);
 
-function testRedirectUri(method, client_id, redirect_uri) {
+function testRedirectUri(method, client_id, redirect_uri, confidential) {
   return {
-    topic: function(credentials, client, oauth2) {
+    topic: function(credentials, confClient, publicClient, oauth2) {
       var self = this,
           codeParameters = {
             response_type: 'code',
@@ -39,13 +63,13 @@ function testRedirectUri(method, client_id, redirect_uri) {
       if (client_id) {
         if (client_id !== 'empty') codeParameters.client_id = client_id;
       } else {
-        codeParameters.client_id = client.id;  
+        codeParameters.client_id = (confidential) ? confClient.id : publicClient.id;  
       }
       
       if (redirect_uri) {
         if (redirect_uri !== 'empty') codeParameters.redirect_uri = redirect_uri;
       } else {
-        codeParameters.redirect_uri = client.redirect_uris[0];  
+        codeParameters.redirect_uri = (confidential) ? confClient.redirect_uris[0] : publicClient.redirect_uris[0];  
       }
       
       helpers.getLoginPage(codeParameters, 'invalid_request', method, function(err, param) {

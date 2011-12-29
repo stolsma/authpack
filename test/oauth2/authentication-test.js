@@ -13,7 +13,7 @@ var helpers = require('../helpers');
 vows.describe('OAuth2/authentication').addBatch({
   "When using the authentication server": helpers.startTestServer({
     "get login page": {
-      topic: function(credentials, client, oauth2) {
+      topic: function(credentials, confClient, publicClient, oauth2) {
         helpers.performLogin(this.callback);
       },
       "check if login page is presented": function(err, loginPage, auth_key) {
