@@ -22,27 +22,24 @@ vows.describe('OAuth2/response-type-error').addBatch({
 function testResponseType(method, response_type) {
   return {
     topic: function(credentials, client, oauth2) {
-      var self = this,
-          codeParameters = {
-            client_id: client.id,
-            redirect_uri: client.redirect_uris[0],
-            scope: 'test',
-            state: 'statetest'
-          };
+      var codeParameters = {
+        client_id: client.id,
+        redirect_uri: client.redirect_uris[0],
+        scope: 'test',
+        state: 'statetest'
+      };
       if (response_type) codeParameters.response_type = response_type;
-      helpers.getLoginPage(codeParameters, 'error', method, function(err, param) {
-        self.callback(err, param, codeParameters);
-      });
+      return helpers.TestClient().getLoginPage(codeParameters, method);
     },
-    "check if correct 'error' type is presented": function(err, param, codeParameters) {
+    "check if correct 'error' type is presented": function(err, promise) {
       assert.isNull(err);
-      assert.equal(param.error, 'unsupported_response_type');
+      assert.equal(promise.errorParams.error, 'unsupported_response_type');
     },
-    "check if 'error_description' is presented": function(err, param, codeParameters) {
-      assert.isString(param.error_description);
+    "check if 'error_description' is presented": function(err, promise) {
+      assert.isString(promise.errorParams.error_description);
     },
-    "correct 'state' is returned": function(err, param, codeParameters) {
-      assert.equal(param.state, codeParameters.state);
+    "correct 'state' is returned": function(err, promise) {
+      assert.equal(promise.errorParams.state, promise.flowOptions.state);
     }
-  }
+  };
 }

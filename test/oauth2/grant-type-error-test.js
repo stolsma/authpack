@@ -20,24 +20,23 @@ vows.describe('OAuth2/grant-type-error').addBatch({
 function testGrantType(grant_type) {
   return {
     topic: function(credentials, client, oauth2) {
-      var self = this,
-          grantParameters = {
-            client_id: client.id,
-            client_secret: client.secret,
-            redirect_uri: client.redirect_uris[0],
-            scope: 'test'
-          };
+      var grantParameters = {
+        client_id: client.id,
+        client_secret: client.secret,
+        redirect_uri: client.redirect_uris[0],
+        scope: 'test'
+      };
+      
       if (grant_type) grantParameters.grant_type = grant_type;
-      helpers.performAccessTokenRequest(grantParameters, function(err, param) {
-        self.callback(err, param, grantParameters);
-      });
+      
+      return helpers.TestClient().performAccessTokenRequest(grantParameters);
     },
-    "check if correct 'error' type is presented": function(err, param, codeParameters) {
+    "check if correct 'error' type is presented": function(err, promise) {
       assert.isNull(err);
-      assert.equal(param.error, 'unsupported_grant_type');
+      assert.equal(promise.errorParams.error, 'unsupported_grant_type');
     },
-    "check if 'error_description' is presented": function(err, param, codeParameters) {
-      assert.isString(param.error_description);
+    "check if 'error_description' is presented": function(err, promise) {
+      assert.isString(promise.errorParams.error_description);
     }
-  }
+  };
 }

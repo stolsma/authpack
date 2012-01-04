@@ -14,49 +14,52 @@ vows.describe('OAuth2/authentication').addBatch({
   "When using the authentication server": helpers.startTestServer({
     "get login page": {
       topic: function(credentials, confClient, publicClient, oauth2) {
-        helpers.performLogin(this.callback);
+        return helpers.TestClient().performLogin();
       },
-      "check if login page is presented": function(err, loginPage, auth_key) {
+      "check if login page is presented": function(err, promise) {
         assert.isNull(err);
-        assert.isTrue(loginPage);
-        assert.isString(auth_key);
+        assert.isTrue(promise.loginPage);
+        assert.isString(promise.authenticationKey);
       },
       "and login with correct credentials": {
-        topic: function(loginPage, auth_key, credentials) {
-          helpers.performLoginPost(credentials, auth_key, this.callback);
+        topic: function(promise, credentials) {
+          return promise.client.performLoginPost(credentials);
         },
-        "and check if login is accepted": function(err, res, body) {
+        "and check if login is accepted": function(err, promise) {
           assert.isNull(err);
-          assert.equal(res.statusCode, 200);
-          assert.equal(body, 'Logged in!');
+          assert.equal(promise.statusCode, 200);
+          assert.isTrue(promise.loggedIn);
         },
         "and logout again": {
-          topic: function() {
-            helpers.performLogout(this.callback);
+          topic: function(promise) {
+            return promise.client.performLogout();
           },
-          "and check if logout is accepted": function(err, result) {
+          "and check if logout is accepted": function(err, promise) {
             assert.isNull(err);
+            assert.isTrue(promise.loggedOut);
           }
         }
       },
+      
       "and login with wrong password": {
-        topic: function(loginPage, auth_key, credentials) {
-          helpers.performLoginPost({username: credentials.username, password: 'jombo'}, auth_key, this.callback);
+        topic: function(promise, credentials) {
+          return promise.client.performLoginPost({username: credentials.username, password: 'jombo'});
         },
-        "and check if login is rejected": function(err, res, body) {
+        "and check if login is rejected": function(err, promise) {
           assert.isNull(err);
-          assert.equal(res.statusCode, 400);
-          assert.equal(body, 'The resource owner or authorization server denied the request.');
+          assert.equal(promise.statusCode, 400);
+          assert.equal(promise.body, 'The resource owner or authorization server denied the request.');
         }
       },
+      
       "and login with wrong username": {
-        topic: function(loginPage, auth_key, credentials) {
-          helpers.performLoginPost({username: 'dombo', password: credentials.password}, auth_key, this.callback);
+        topic: function(promise, credentials) {
+          return promise.client.performLoginPost({username: 'dombo', password: credentials.password});
         },
-        "and check if login is rejected": function(err, res, body) {
+        "and check if login is rejected": function(err, promise) {
           assert.isNull(err);
-          assert.equal(res.statusCode, 400);
-          assert.equal(body, 'The resource owner or authorization server denied the request.');
+          assert.equal(promise.statusCode, 400);
+          assert.equal(promise.body, 'The resource owner or authorization server denied the request.');
         }
       }
     }

@@ -53,12 +53,11 @@ vows.describe('OAuth2/redirect-uri-error').addBatch({
 function testRedirectUri(method, client_id, redirect_uri, confidential) {
   return {
     topic: function(credentials, confClient, publicClient, oauth2) {
-      var self = this,
-          codeParameters = {
-            response_type: 'code',
-            scope: 'test',
-            state: 'statetest'
-          };
+      var codeParameters = {
+        response_type: 'code',
+        scope: 'test',
+        state: 'statetest'
+      };
           
       if (client_id) {
         if (client_id !== 'empty') codeParameters.client_id = client_id;
@@ -72,16 +71,14 @@ function testRedirectUri(method, client_id, redirect_uri, confidential) {
         codeParameters.redirect_uri = (confidential) ? confClient.redirect_uris[0] : publicClient.redirect_uris[0];  
       }
       
-      helpers.getLoginPage(codeParameters, 'invalid_request', method, function(err, param) {
-        self.callback(err, param, codeParameters);
-      });
+      return helpers.TestClient().getLoginPage(codeParameters, method);
     },
-    "check if correct 'error' type is presented": function(err, param, codeParameters) {
+    "check if correct 'error' type is presented": function(err, promise) {
       assert.isNull(err);
-      assert.equal(param.error, 'invalid_request');
+      assert.equal(promise.errorParams.error, 'invalid_request');
     },
-    "check if 'error_description' is presented": function(err, param, codeParameters) {
-      assert.isString(param.error_description);
+    "check if 'error_description' is presented": function(err, promise) {
+      assert.isString(promise.errorParams.error_description);
     }
-  }
-}
+  };
+};

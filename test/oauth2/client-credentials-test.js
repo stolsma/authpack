@@ -15,20 +15,17 @@ vows.describe('OAuth2/client-credentials').addBatch({
     
     "test 'basic authentication' of client (password grant)": {
       topic: function(credentials, client, oauth2) {
-        var self = this;
         var params = {
           grant_type: 'password',
           client_id: client.id,
           client_secret: client.secret,
           basic: true
         };
-        helpers.performAccessTokenRequest(params, function(err, result, statusCode){
-          self.callback(err, result, statusCode);
-        });
+        return helpers.TestClient().performAccessTokenRequest(params);
       },
-      "and client is authenticated": function(err, result, statusCode) {
+      "and client is authenticated": function(err, promise) {
         assert.isNull(err);
-        assert.equal(statusCode, 200);
+        assert.equal(promise.statusCode, 200);
       }
     },
     
@@ -40,20 +37,17 @@ vows.describe('OAuth2/client-credentials').addBatch({
 
     "test 'param authentication' of client (password grant)": {
       topic: function(credentials, client, oauth2) {
-        var self = this;
         var params = {
           grant_type: 'password',
           client_id: client.id,
           client_secret: client.secret,
           basic: false
         };
-        helpers.performAccessTokenRequest(params, function(err, result, statusCode){
-          self.callback(err, result, statusCode);
-        });
+        return helpers.TestClient().performAccessTokenRequest(params);
       },
-      "and client is authenticated": function(err, result, statusCode) {
+      "and client is authenticated": function(err, promise) {
         assert.isNull(err);
-        assert.equal(statusCode, 200);
+        assert.equal(promise.statusCode, 200);
       }
     },
     
@@ -69,29 +63,26 @@ vows.describe('OAuth2/client-credentials').addBatch({
 function accessTokenRequestErrorTest(client_id, client_secret, basic, extraContext) {
   var context = {
     topic: function(credentials, client, oauth2) {
-      var self = this;
       var params = {
         grant_type: 'password',
         client_id: client_id || client.id,
         client_secret: client_secret || client.secret,
         basic: basic
       };
-      helpers.performAccessTokenRequest(params, function(err, result, statusCode, headers){
-        self.callback(err, result, statusCode, headers);
-      });
+      return helpers.TestClient().performAccessTokenRequest(params);
     },
-    "check if HTTP status code 401 is returned": function(err, result, statusCode) {
+    "check if HTTP status code 401 is returned": function(err, promise) {
       assert.isNull(err);
-      assert.equal(statusCode, 401);
+      assert.equal(promise.statusCode, 401);
     },
-    "check if 'WWW-Authenticate' header is presented": function(err, result, statusCode, headers) {
-      assert.equal(headers["www-authenticate"], 'Basic realm="authorization service"');
+    "check if 'WWW-Authenticate' header is presented": function(err, promise) {
+      assert.equal(promise.headers["www-authenticate"], 'Basic realm="authorization service"');
     },
-    "check if correct 'error' type ('invalid_client') is presented": function(err, result, statusCode) {
-      assert.equal(result.error, 'invalid_client');
+    "check if correct 'error' type ('invalid_client') is presented": function(err, promise) {
+      assert.equal(promise.errorParams.error, 'invalid_client');
     },
-    "check if 'error_description' is presented": function(err, result, statusCode) {
-      assert.isString(result.error_description);
+    "check if 'error_description' is presented": function(err, promise) {
+      assert.isString(promise.errorParams.error_description);
     }
   };
   

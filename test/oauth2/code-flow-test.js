@@ -14,8 +14,7 @@ vows.describe('OAuth2/code-flow').addBatch({
   "When using the authorization server": helpers.startTestServer({
     "start authorization code flow": {
       topic: function(credentials, client, oauth2) {
-        var self = this,
-            codeParameters = {
+        var codeParameters = {
               response_type: 'code',
               client_id: client.id,
               client_secret: client.secret,
@@ -23,34 +22,33 @@ vows.describe('OAuth2/code-flow').addBatch({
               scope: 'test',
               state: 'statetest'
             };
-        helpers.getLoginPage(codeParameters, '', 'GET', function(err, loginPage, auth_key) {
-          loginPage = (loginPage) ? null : 'No login page returned';
-          self.callback(err || loginPage, codeParameters, auth_key);
-        });
+        return helpers.TestClient().getLoginPage(codeParameters, 'GET');
       },
-      "check if login page is presented": function(err, codeParameters) {
+      "check if login page is presented": function(err, promise) {
         assert.isNull(err);
       },
       "do login and get authorization": {
-        topic: function(codeParameters, auth_key, credentials) {
-          helpers.getAuthorizationPage(codeParameters, '', auth_key, credentials, this.callback);
+        topic: function(promise, credentials) {
+          return promise.client.getAuthorizationPage(promise.flowOptions, promise.authenticationKey, credentials);
         },
-        "check if authorization page is presented": function(err, auth_key) {
+        "check if authorization page is presented": function(err, promise) {
           assert.isNull(err);
-          assert.isString(auth_key);
+          assert.isTrue(promise.authorizationPage);
+          assert.isString(promise.authorizationKey);
         },
         "give authorization and get code": {
-          topic: function(auth_key, codeParameters) {
-            helpers.performCodeFlowAuthorization(auth_key, codeParameters, this.callback);
+          topic: function(promise) {
+            return promise.client.performCodeFlowAuthorization(promise.authorizationKey, promise.flowOptions);
           },
-          "request is handled correctly": function(err, params) {
+          "request is handled correctly": function(err, promise) {
             assert.isNull(err);
+            assert.isTrue(promise.codeFlowBody);
           },
-          "correct 'state' is returned": function(err, params) {
-            assert.equal(params.state, 'statetest');
+          "correct 'state' is returned": function(err, promise) {
+            assert.equal(promise.codeFlowResult.state, promise.flowOptions.state);
           },
-          "'code' is returned": function(err, params) {
-            assert.isTrue(!!params.code);
+          "'code' is returned": function(err, promise) {
+            assert.isString(promise.codeFlowResult.code);
           },
           "do 'acces token' request": accessTokenRequestTest('code', {
             "do 'refresh_token' request": accessTokenRequestTest('refresh', {
@@ -66,44 +64,42 @@ vows.describe('OAuth2/code-flow').addBatch({
 
 function accessTokenRequestTest(type, extraContext) {
   var context = {
-    topic: function(result, dummy, codeParameters) {
-      var self = this;
+    topic: function(promise) {
+      
       var params = {
-        client_id: codeParameters.client_id,
-        client_secret:  codeParameters.client_secret
+        client_id: promise.flowOptions.client_id,
+        client_secret: promise.flowOptions.client_secret
       };
       
       if (type === 'code') {
         params.grant_type = 'authorization_code';
-        params.code = result.code;
+        params.code = promise.codeFlowResult.code;
       }
       
       if (type === 'refresh') {
         params.grant_type = 'refresh_token';
-        params.refresh_token = result.refresh_token;
+        params.refresh_token = promise.accessTokenResult.refresh_token;
       }
         
-      helpers.performAccessTokenRequest(params, function(err, result){
-        self.callback(err, result, null, codeParameters);
-      });
+      return promise.client.performAccessTokenRequest(params);
     },
-    "request is handled correctly": function(err, result) {
+    "request is handled correctly": function(err, promise) {
       assert.isNull(err);
     },
-    "'access_token' is returned": function(err, result) {
-      assert.isString(result.access_token);
+    "'access_token' is returned": function(err, promise) {
+      assert.isString(promise.accessTokenResult.access_token);
     },
-    "'token_type' is `bearer`": function(err, result) {
-      assert.equal(result.token_type, 'bearer');
+    "'token_type' is `bearer`": function(err, promise) {
+      assert.equal(promise.accessTokenResult.token_type, 'bearer');
     },
-    "'expires_in' = 3600": function(err, result) {
-      assert.equal(result.expires_in, 3600);
+    "'expires_in' = 3600": function(err, promise) {
+      assert.equal(promise.accessTokenResult.expires_in, 3600);
     },
-    "'refresh_token' is returned": function(err, result) {
-      assert.isString(result.refresh_token);
+    "'refresh_token' is returned": function(err, promise) {
+      assert.isString(promise.accessTokenResult.refresh_token);
     },
-    "correct 'scope' is returned": function(err, result) {
-      assert.equal(result.scope, '');
+    "correct 'scope' is returned": function(err, promise) {
+      assert.equal(promise.accessTokenResult.scope, '');
     }
   };
   

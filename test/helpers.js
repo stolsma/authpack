@@ -9,25 +9,67 @@
  */
 
 var assert = require('assert'),
-    qs = require('qs'),
+    qs = require('querystring'),
+    url = require('url'),
     union = require('union');
     
-var authpack = require('../lib/authpack'),
+var EventEmitter = require('events').EventEmitter,
+    authpack = require('../lib/authpack'),
     request = authpack.utils.request,
     helpers = exports;
 
 
-helpers.createOAuth2 = function() {
-  var oauth2 = authpack.oauth2.init({
-        authentication: {},
-        authorization: {},
-        authorizationServer: {},
-        resourceServer: {}
+/**
+ * 
+ */
+helpers.startTestServer = function(extraContext) {
+  var credentials = {username: 'sander', password: 'test'};
+  var context = {
+    topic: function() {
+      var self = this,
+          oauth2 = helpers.createOAuth2();
+      helpers.startServer(oauth2, helpers.createRouter(oauth2));
+      oauth2.authentication.users.add('sander', credentials , function(err, id, userData) {
+        if (err) return self.callback(err);
+        oauth2.authorizationServer.clients.create('client', 'confidential',  ['http://localhost:9090/foo'], 'This is the test client',  function(err, confClient) {
+          oauth2.authorizationServer.clients.create('client', 'public',  ['http://localhost:9090/foo'], 'This is the test client',  function(err, publicClient) {
+             self.callback(err, credentials, confClient, publicClient, oauth2);
+          });
+        });
       });
-  return oauth2;
-}
+    },
+    "it should be properly created": function(credentials, client, oauth2) {
+      // TODO Implement authorizationServer creation test
+      assert.isTrue(!!oauth2);
+    }
+  };
+  
+  if (extraContext) {
+    helpers.mixin(context, extraContext);
+  }
+  
+  return context;
+};
 
 
+/**
+ * Create an OAuth2 server with given options.
+ * @param {Object} options
+ */
+helpers.createOAuth2 = function(options) {
+  options = options || {};
+  return authpack.oauth2.init({
+    authentication: options.authentication || {},
+    authorization: options.authorisation || {},
+    authorizationServer: options.authorizationServer || {},
+    resourceServer: options.resourceServer || {}
+  });
+};
+
+/**
+ * Create a standard router for given OAuth2 Server
+ * @param {} oauth2 OAuth2 server
+ */
 helpers.createRouter = function(oauth2) {
   var router = oauth2.createRouter();
   
@@ -54,10 +96,15 @@ helpers.createRouter = function(oauth2) {
   });
 
   return router;
-}
+};
 
-
-helpers.startServer = function(oauth2, router) {
+/**
+ * 
+ * @param {} oauth2
+ * @param {} router
+ * @param {} port
+ */
+helpers.startServer = function(oauth2, router, port) {
   var server = union.createServer({
     before: [
       oauth2.resourceServerActions,
@@ -69,39 +116,91 @@ helpers.startServer = function(oauth2, router) {
       }
     ]
   });
-  server.listen(9090);
+  server.listen(port || 9090);
   return server;
-}
-
-
-helpers.startTestServer = function(extraContext) {
-  var credentials = {username: 'sander', password: 'test'};
-  var context = {
-    topic: function() {
-      var self = this,
-          oauth2 = helpers.createOAuth2();
-      helpers.startServer(oauth2, helpers.createRouter(oauth2));
-      oauth2.authentication.users.add('sander', credentials , function(err, id, userData) {
-        if (err) return self.callback(err);
-        oauth2.authorizationServer.clients.create('client', 'confidential',  ['http://localhost:9090/foo'], 'This is the test client',  function(err, confClient) {
-          oauth2.authorizationServer.clients.create('client', 'public',  ['http://localhost:9090/foo'], 'This is the test client',  function(err, publicClient) {
-             self.callback(err, credentials, confClient, publicClient, oauth2);
-          });
-        });
-      });
-    },
-    "it should be properly created": function(credentials, client, oauth2) {
-      // TODO Implement authorizationServer creation test
-      assert.isTrue(!!oauth2);
-    }
-  }
-  
-  if (extraContext) {
-    helpers.mixin(context, extraContext);
-  }
-  
-  return context
 };
+
+//
+//
+// General AuthorizationServer functions
+//
+//
+
+helpers.createClient = function(oauth2, name, redirect_uri, info, next) {
+  oauth2.authorizationServer.clients.create(name, redirect_uri, info, function(data) {
+    return next(data);
+  });
+};
+
+
+//
+//
+// TestClient Class
+//
+//
+
+/**
+ * The TestClient implementation
+ * @class TestClient
+ * @constructor
+ * @param {Object} options Configuration options that will be applied to the created instance
+ */
+var TestClient = helpers.TestClient = function(options) {
+  // if called as function return Instance
+	if (!(this instanceof TestClient)) return new TestClient(options);
+
+  // set client constants
+  options = options || {};
+  this.server = {
+    protocol: 'http:',
+    hostname: '127.0.0.1',
+    port: '9090'
+  };
+  
+  // copy options to this instance
+  helpers.mixin(this, options);
+};
+
+/**
+ * Create a url from the server constant + given parameters
+ * @param {String} path The path section of the URL, that comes after the host and before the query, including the
+ * initial slash if present. Example: '/p/a/t/h'
+ * @param {String/Object} qs Either the 'params' portion of the query string, or a querystring-parsed object. 
+ * Example: 'query=string' or {'query':'string'}
+ * @param {String} hash The 'fragment' portion of the URL including the pound-sign. Example: '#hash'
+ */
+TestClient.prototype.url = function(path, qs, hash) {
+  var urlParts = {
+    pathname: path || '',
+    query: qs || {},
+    hash: hash || ''
+  };
+  helpers.mixin(urlParts, this.server);
+  return url.format(urlParts);
+};
+
+/**
+ * Do a HTTP request with the client specific `request` function and call callback when request returned
+ * @param {Object} reqOptions Request options to use
+ * @param {Function} callback Callback function to call when ready. Will be called with err, res, body.
+ */
+TestClient.prototype.request = function(reqOptions, callback) {
+  var promise = new EventEmitter();
+  promise.client = this;
+
+  request(reqOptions, function(err, res, body) {
+    promise.res = res;
+    promise.body = body;
+    promise.statusCode = res.statusCode;
+    
+    if (err) return promise.emit('error', err, promise);
+    
+    callback(res, body, promise);
+  });
+  
+  return promise;
+};
+
 
 //
 //
@@ -109,28 +208,39 @@ helpers.startTestServer = function(extraContext) {
 //
 //
 
-
-helpers.performLogin = function(callback) {
+/**
+ * Get the login screen from the test server
+ * @return {TestClient} The result promise
+ */
+TestClient.prototype.performLogin = function() {
+  var that = this;
   var reqOptions = {
-    url: 'http://localhost:9090/login?test=test',
+    url: this.url('/login', {test: 'test'}),
     method: 'GET'
   };
   
-  request(reqOptions, function(err, res, body) {
-    if (err) return callback(err);
+  return this.request(reqOptions, function(res, body, promise) {
     if (res.statusCode === 200) {
       var partial = '<button type="submit">Login</button>';
-      return callback(null, body.indexOf(partial) !== -1, getAuthenticationKey(body));
-    }else {
-      return callback('Wrong response on request (statuscode=' + res.statusCode + ' body=' + body + ')');
+      promise.loginPage = body.indexOf(partial) > -1;
+      that.authenticationKey = promise.authenticationKey = getAuthenticationKey(body);
+    } else {
+      promise.loginPage = false;
+      that.authenticationKey = null;
     }
+    
+    promise.emit('success', promise);
   });
-}
+};
 
-
-helpers.performLoginPost = function(userData, auth_key, callback) {
+/**
+ * Do the login post with given userData
+ * @param {Object} userData The username and password to login with
+ * @return {TestClient} The result promise
+ */
+TestClient.prototype.performLoginPost = function(userData) {
   var reqOptions = {
-    url: 'http://localhost:9090/login?test=test' + auth_key,
+    url: this.url('/login', {test: 'test', authentication: this.authenticationKey}),
     method: 'POST',
     headers: {
       'Content-Type': 'application/x-www-form-urlencoded'
@@ -140,36 +250,38 @@ helpers.performLoginPost = function(userData, auth_key, callback) {
       password: userData.password
     })
   };
-  request(reqOptions, callback);
-}
+  
+  return this.request(reqOptions, function(res, body, promise) {
+    if (res.statusCode === 200) {
+      promise.loggedIn = body === 'Logged in!';
+    } else {
+      promise.loggedIn = false;
+    }
+    
+    promise.emit('success', promise);
+  });
+};
 
-helpers.performLogout = function(callback) {
+/**
+ * Do logout from server
+ * @return {TestClient} The result promise
+ */
+TestClient.prototype.performLogout = function() {
   var reqOptions = {
-    url: 'http://localhost:9090/logout',
-    method: 'GET',
+    url: this.url('/logout'),
+    method: 'GET'
   };
   
-  request(reqOptions, function(err, res, body) {
-    if (err) return callback(err);
-    if (res.statusCode === 200 && body === 'Logged out!') {
-      callback(null);
-    }else {
-      callback('Wrong response on request (statuscode=' + res.statusCode + ' body=' + body + ')');
+  return this.request(reqOptions, function(res, body, promise) {
+    if (res.statusCode === 200) {
+      promise.loggedOut = body === 'Logged out!';
+    } else {
+      promise.loggedOut = false;
     }
+    
+    promise.emit('success', promise);
   });
-}
-
-//
-//
-// General Authorization functions
-//
-//
-
-helpers.createClient = function(oauth, name, redirect_uri, info, next) {
-  oauth2.authorizationServer.clients.create(name, redirect_uri, info, function(data) {
-    return next(data);
-  });
-}
+};
 
 //
 //
@@ -180,45 +292,45 @@ helpers.createClient = function(oauth, name, redirect_uri, info, next) {
 /**
  * Do the first step in the Authorization Flow, get the login page.
  */
-helpers.getLoginPage = function(options, expect, method, callback) {
+TestClient.prototype.getLoginPage = function(options, method) {
+  var that = this;
   var reqOptions = {
-    url: 'http://localhost:9090/oauth2/authorize?' + qs.stringify(options),
-    method: method,
+    url: this.url('/oauth2/authorize', options),
+    method: method
   };
   
-  request(reqOptions, function(err, res, body) {
-    if (err) return callback(err);
+  return this.request(reqOptions, function(res, body, promise) {
+    // save the OAuth2 flow options
+    promise.flowOptions = options;
+    
     if (res.statusCode === 200) {
-      if (expect !== 'error') {
-        // the test expects a login form returned
-        var partial = '<button type="submit">Login</button>';
-        return callback(null, body.indexOf(partial) !== -1, getAuthenticationKey(body));
-      } else {
-        // the test expects that there is an error msg returned
-        var params = qs.parse(res.request.uri.query);
-        if (body === 'hello world get') {
-          return callback(null, params);
-        } else {
-          return callback('Wrong body returned', params);
-        }
-      }
-    } if (res.statusCode === 400 && body.indexOf(expect) !== -1) {
-      // the test expects that there is an 'invalid_request' error returned
-      var data = JSON.parse(body);
-      return callback(null, data);
-    } else {
-      return callback('Wrong response on request (statuscode=' + res.statusCode + ' body=' + body + ')');
+      // check if a login form is returned
+      var partial = '<button type="submit">Login</button>';
+      promise.loginPage = body.indexOf(partial) > -1;
+      that.authenticationKey = promise.authenticationKey = getAuthenticationKey(body);
+
+      // check for an error msg returned
+      promise.errorParams = qs.parse(res.request.uri.query);
+      promise.errorBody = body === 'hello world get';
     }
+    
+    if (res.statusCode === 400) {
+      // there should be an error body returned
+      promise.errorParams = JSON.parse(body);
+    }
+    
+    return promise.emit('success', promise);
   });
-}
+};
 
 
 /**
  * Do the 2nd step in the Authorization Flow, get the authorization page 
  */
-helpers.getAuthorizationPage = function(options, expect, auth_key, credentials, callback) {
+TestClient.prototype.getAuthorizationPage = function(options, auth_key, credentials) {
+  var that = this;
   var reqOptions = {
-    url: 'http://localhost:9090/oauth2/authorize?' + qs.stringify(options) + auth_key,
+    url: this.url('/oauth2/authorize', options) + '&' + qs.stringify({ authentication: auth_key }),
     method: 'POST',
     headers: {
       'Content-Type': 'application/x-www-form-urlencoded'
@@ -227,60 +339,74 @@ helpers.getAuthorizationPage = function(options, expect, auth_key, credentials, 
       username: credentials.username,
       password: credentials.password
     })
-  }
+  };
   
-  request(reqOptions, function(err, res, body) {
-    if (err) return callback(err);
+  return this.request(reqOptions, function(res, body, promise) {
+    // save the OAuth2 flow options
+    promise.flowOptions = options;
+    
     if (res.statusCode === 200) {
-      if (expect !== 'error') {
-        // the test expects an authorize form returned
-        return callback(null, getAuthorizationKey(body));
-      } else {
-        // the test expects that there is an error msg returned
-        var params = qs.parse(res.request.uri.query);
-        if (body === 'hello world get') {
-          return callback(null, params);
-        } else {
-          return callback('Wrong body returned', params);
-        }
-      }
-    }else {
-      return callback('Wrong response on request (statuscode=' + res.statusCode + ' body=' + body + ')');
+      // Check if authorization page and try to get the Authorization key
+      var partial = '<button name="allow">Allow</button><button name="deny">Deny</button>';
+      promise.authorizationPage = body.indexOf(partial) > -1;
+      that.authorizationKey = promise.authorizationKey = getAuthorizationKey(body);
+
+      // check for an error msg returned
+      promise.errorParams = qs.parse(res.request.uri.query);
+      promise.errorBody = body === 'hello world get';
     }
+    
+    if (res.statusCode === 400) {
+      // there should be an error body returned
+      promise.errorParams = JSON.parse(body);
+    }
+    
+    return promise.emit('success', promise);
   });
-}
+};
 
 /**
  * Do the next steps in the Authorization Code Flow
  */
-helpers.performCodeFlowAuthorization = function(auth_key, options, callback) {
+TestClient.prototype.performCodeFlowAuthorization = function(auth_key, options) {
   var reqOptions = {
-    url: 'http://localhost:9090/oauth2/authorize?' + qs.stringify(options) + auth_key,
+    url: this.url('/oauth2/authorize', options) + '&' + qs.stringify({ authorization: auth_key }),
     method: 'POST',
     headers: {
       'Content-Type': 'application/x-www-form-urlencoded'
     },
     body: qs.stringify({
-      next : 'http://localhost:9090/foo',
       allow : true
     })
   };
   
-  request(reqOptions, function(err, res, body) {
-    var params = qs.parse(res.request.uri.query);
-    if (err) callback (err);
-    if (res.statusCode === 200 && body === 'hello world get') {
-      callback(null, params);
-    } else {
-      callback('Wrong response on request (statuscode=' + res.statusCode + ' body=' + body + ')');
+  return this.request(reqOptions, function(res, body, promise) {
+    // save the OAuth2 flow options
+    promise.flowOptions = options;
+    
+    if (res.statusCode === 200) {
+      // try to get the code flow result
+      promise.codeFlowResult = qs.parse(res.request.uri.query);
+      promise.codeFlowBody = body === 'hello world get';
+
+      // check for an error msg returned
+      promise.errorParams = qs.parse(res.request.uri.query);
+      promise.errorBody = body === 'hello world get';
     }
+
+    if (res.statusCode === 400) {
+      // there should be an error body returned
+      promise.errorParams = JSON.parse(body);
+    }
+    
+    return promise.emit('success', promise);
   });
 };
 
 /**
  * Perform an Access Token Request
  */
-helpers.performAccessTokenRequest = function(options, callback) {
+TestClient.prototype.performAccessTokenRequest = function(options) {
   var body = {
     grant_type: options.grant_type,
     redirect_uri: 'http://localhost:9090/foo'
@@ -307,15 +433,33 @@ helpers.performAccessTokenRequest = function(options, callback) {
     body: qs.stringify(body)
   };
 
-  request(reqOptions, function(err, res, body) {
-    if (err) return callback(err);
-    var result;
-    try {
-      result = JSON.parse(body);
-    } catch (error) {
-      err = error;
+  return this.request(reqOptions, function(res, body, promise) {
+    // save the OAuth2 flow options
+    promise.flowOptions = options;
+    
+    if (res.statusCode === 200) {
+      // try to get the access token request result
+      try {
+        promise.accessTokenResult = JSON.parse(body);
+        promise.accessTokenRequestBody = true;
+      } catch (error) {
+        promise.errorBody = true;
+        promise.err = error;
+      }
     }
-    callback(err, result, res.statusCode, res.headers);
+
+    if (res.statusCode === 400) {
+      // there should be an error body returned
+      promise.errorParams = JSON.parse(body);
+    }
+    
+    if (res.statusCode === 401) {
+      // there should be an error body returned
+      promise.headers = res.headers || {};
+      promise.errorParams = JSON.parse(body);
+    }
+    
+    return promise.emit('success', promise);
   });
 };
 
@@ -323,9 +467,12 @@ helpers.performAccessTokenRequest = function(options, callback) {
 /**
  * Do the next steps in the Implicit Grant Flow
  */
-helpers.performImplicitGrantAuthorization = function(userId, options, callback) {
+TestClient.prototype.performImplicitGrantAuthorization = function(auth_key, options) {
   var reqOptions = {
-    url: 'http://localhost:9090/oauth2/authorize?' + qs.stringify(options) + userId,
+    url: 'http://localhost:9090/oauth2/authorize?' +
+         qs.stringify(options) +
+         '&' + qs.stringify({ authorization: auth_key }),
+
     method: 'POST',
     headers: {
       'Content-Type': 'application/x-www-form-urlencoded'
@@ -336,16 +483,30 @@ helpers.performImplicitGrantAuthorization = function(userId, options, callback) 
     })
   };
   
-  request(reqOptions, function(err, res, body) {
-    var params = qs.parse(res.request.uri.hash.slice(1));
-    if (err) callback (err);
-    if (res.statusCode === 200 && body === 'hello world get') {
-      callback(null, params);
-    } else {
-      callback('Wrong response on request (statuscode=' + res.statusCode + ' body=' + body + ')');
+  return this.request(reqOptions, function(res, body, promise) {
+    // save the OAuth2 flow options
+    promise.flowOptions = options;
+    
+    if (res.statusCode === 200) {
+      // try to get the access token request result
+        promise.implicitGrantResult = qs.parse(res.request.uri.hash.slice(1));
+        promise.implicitGrantBody = body === 'hello world get';
     }
+
+    if (res.statusCode === 400) {
+      // there should be an error body returned
+      promise.errorParams = JSON.parse(body);
+    }
+    
+    if (res.statusCode === 401) {
+      // there should be an error body returned
+      promise.headers = res.headers || {};
+      promise.errorParams = JSON.parse(body);
+    }
+    
+    return promise.emit('success', promise);
   });
-}
+};
 
 //
 //
@@ -354,23 +515,23 @@ helpers.performImplicitGrantAuthorization = function(userId, options, callback) 
 //
 
 function getAuthenticationKey(body) {
-  var partial = '&authentication=',
-      location = body.indexOf(partial);
+  var partial = 'action="',
+      location = body.indexOf(partial) + partial.length;
   
   body = body.slice(location);
   location = body.indexOf('"');
   body = body.slice(0, location);
-  return body;
+  return url.parse(body, true).query.authentication;
 }
 
 function getAuthorizationKey(body) {
-  var partial = '&authorization=',
-      location = body.indexOf(partial);
+  var partial = 'action="',
+      location = body.indexOf(partial) + partial.length;
   
   body = body.slice(location);
   location = body.indexOf('"');
   body = body.slice(0, location);
-  return body;
+  return url.parse(body, true).query.authorization;
 }
 
 
