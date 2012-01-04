@@ -13,14 +13,13 @@
   },
   "keywords": ["distributed", "oauth2", "service", "authorization", "authentication", "OpenID Connect"],
   "dependencies": {
-    "qs": "0.3.2",
     "request": "2.2.x >=2.2.9",
     "serializer": ">=0.0.2"
   },
   "devDependencies": {
-    "director": "1.0.x >=1.0.6",
+    "director": "git://github.com/flatiron/director.git",
     "union": "0.1.x >=0.1.4",
-    "vows": "0.5.x >=0.5.10"
+    "vows": "0.6.x >=0.6.1"
   },
   "main": "./lib/authpack",
   "bin": {
