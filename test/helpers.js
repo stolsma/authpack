@@ -9,12 +9,14 @@
  */
 
 var assert = require('assert'),
+    director = require('director'),
     qs = require('querystring'),
     url = require('url'),
     union = require('union');
     
 var EventEmitter = require('events').EventEmitter,
     authpack = require('../lib/authpack'),
+    oauth2 = authpack.oauth2,
     request = authpack.utils.request,
     helpers = exports;
 
@@ -27,14 +29,18 @@ helpers.startTestServer = function(extraContext) {
   var context = {
     topic: function() {
       var self = this,
-          oauth2 = helpers.createOAuth2();
-          
-      helpers.startServer(oauth2, helpers.createRouter(oauth2));
+          oauth2Server = new oauth2.AuthorizationServer({
+            authentication: new oauth2.AuthenticationPlugin(),
+            authorization: new oauth2.AuthorizationPlugin()
+          }),
+          resourceServer = new oauth2.ResourceServer();
+        
+      helpers.startServer(resourceServer, helpers.createRouter(oauth2Server));
       
-      oauth2.authentication.users.add('sander', credentials , function(err, id, userData) {
+      oauth2Server.authentication.users.add('sander', credentials , function(err, id, userData) {
         if (err) return self.callback(err);
-        oauth2.authorization.createClient('client', 'confidential',  ['http://localhost:9090/foo'], 'This is the test client',  function(err, confClient) {
-          oauth2.authorization.createClient('client', 'public',  ['http://localhost:9090/foo'], 'This is the test client',  function(err, publicClient) {
+        oauth2Server.authorization.createClient('client', 'confidential',  ['http://localhost:9090/foo'], 'This is the test client',  function(err, confClient) {
+          oauth2Server.authorization.createClient('client', 'public',  ['http://localhost:9090/foo'], 'This is the test client',  function(err, publicClient) {
              self.callback(err, credentials, confClient, publicClient, oauth2);
           });
         });
@@ -55,26 +61,38 @@ helpers.startTestServer = function(extraContext) {
 
 
 /**
- * Create an OAuth2 server with given options.
- * @param {Object} options
+ * Create a test router for given OAuth2 Server
+ * @param {} oauth2Server OAuth2 server code
  */
-helpers.createOAuth2 = function(options) {
+helpers.createRouter = function(oauth2Server, options) {
+  var router;
   options = options || {};
-  return authpack.oauth2.init({
-    authentication: options.authentication || {},
-    authorization: options.authorisation || {},
-    authorizationServer: options.authorizationServer || {},
-    resourceServer: options.resourceServer || {}
-  });
-};
-
-/**
- * Create a standard router for given OAuth2 Server
- * @param {} oauth2 OAuth2 server
- */
-helpers.createRouter = function(oauth2) {
-  var router = oauth2.createRouter();
   
+  // check if router is given and if not use Director
+  if (options.router) {
+    router = options.router;
+  } else {
+    router = new director.http.Router().configure({async: true});
+  }
+
+  //
+  // authorization server endpoints
+  //
+  router.get('/oauth2/authorize', function authorizationEndpointGet(next) {
+    oauth2Server.authorizationEndpoint(this.req, this.res, next);
+  });
+  
+  router.post('/oauth2/authorize', function authorizationEndpointPost(next) {
+    oauth2Server.authorizationEndpoint(this.req, this.res, next);
+  });
+  
+  router.post('/oauth2/access_token', function tokenEndpoint(next) {
+    oauth2Server.tokenEndpoint(this.req, this.res, next);
+  });
+
+  //
+  // client test endpoints
+  //
   router.get('/foo', function () {
     this.res.writeHead(200, { 'Content-Type': 'text/plain' });
     this.res.end('hello world get');
@@ -85,16 +103,19 @@ helpers.createRouter = function(oauth2) {
     this.res.end('hello world post');
   });
   
+  //
+  // authentication plugin endpoints
+  //
   router.get('/login', function(next) {
-    oauth2.authentication.loginEndpoint(this.req, this.res, next);
+    oauth2Server.authentication.loginEndpoint(this.req, this.res, next);
   });
 
   router.post('/login', function(next) {
-    oauth2.authentication.loginEndpoint(this.req, this.res, next);
+    oauth2Server.authentication.loginEndpoint(this.req, this.res, next);
   });
 
   router.get('/logout', function(next) {
-    oauth2.authentication.logoutEndpoint(this.req, this.res, next);
+    oauth2Server.authentication.logoutEndpoint(this.req, this.res, next);
   });
 
   return router;
@@ -102,14 +123,17 @@ helpers.createRouter = function(oauth2) {
 
 /**
  * 
- * @param {} oauth2
+ * @param {} resourceServer Resource server object
  * @param {} router
- * @param {} port
+ * @param {} port Port to start this server on (default: 9090)
+ * @return {Server}
  */
-helpers.startServer = function(oauth2, router, port) {
+helpers.startServer = function(resourceServer, router, port) {
   var server = union.createServer({
     before: [
-      oauth2.resourceServerActions,
+      function(req, res, next) {
+        resourceServer.checkToken(req, res, next);
+      },
       function (req, res) {
         var found = router.dispatch(req, res);
         if (!found) {
@@ -121,6 +145,7 @@ helpers.startServer = function(oauth2, router, port) {
   server.listen(port || 9090);
   return server;
 };
+
 
 //
 //
