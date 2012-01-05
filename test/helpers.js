@@ -28,11 +28,13 @@ helpers.startTestServer = function(extraContext) {
     topic: function() {
       var self = this,
           oauth2 = helpers.createOAuth2();
+          
       helpers.startServer(oauth2, helpers.createRouter(oauth2));
+      
       oauth2.authentication.users.add('sander', credentials , function(err, id, userData) {
         if (err) return self.callback(err);
-        oauth2.authorizationServer.clients.create('client', 'confidential',  ['http://localhost:9090/foo'], 'This is the test client',  function(err, confClient) {
-          oauth2.authorizationServer.clients.create('client', 'public',  ['http://localhost:9090/foo'], 'This is the test client',  function(err, publicClient) {
+        oauth2.authorization.createClient('client', 'confidential',  ['http://localhost:9090/foo'], 'This is the test client',  function(err, confClient) {
+          oauth2.authorization.createClient('client', 'public',  ['http://localhost:9090/foo'], 'This is the test client',  function(err, publicClient) {
              self.callback(err, credentials, confClient, publicClient, oauth2);
           });
         });
