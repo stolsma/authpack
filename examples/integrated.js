@@ -13,24 +13,39 @@ var director = require('director'),
 
 var oauth2 = require('../lib/authpack').oauth2;
 
-// create the OAuth2 Authentication server code
-var oauth2Server = new oauth2.AuthorizationServer({
-      authentication: new oauth2.AuthenticationPlugin(),
-      authorization: new oauth2.AuthorizationPlugin()
-    }),
-    resourceServer = new oauth2.ResourceServer(),
-    cred = {username: 'sander', password: 'test'};
+//
+// create the OAuth2 Authentication server and plugins
+//
+var authentication = new oauth2.AuthenticationPlugin(),
+    authorization = new oauth2.AuthorizationPlugin(),
+    oauth2Server = new oauth2.AuthorizationServer(),
+    resourceServer = new oauth2.ResourceServer();
 
+//
+// bind plugins to OAuth2 server events
+//
+oauth2Server.on('enforceLogin', authentication.enforceLogin.bind(authentication));
+oauth2Server.on('authorizeScope', authorization.authorizeScope.bind(authorization));
+oauth2Server.on('generateCode', authorization.generateCode.bind(authorization));
+oauth2Server.on('checkCode', authorization.checkCode.bind(authorization));
+oauth2Server.on('generateAccessToken', authorization.generateAccessToken.bind(authorization));
+oauth2Server.on('lookupClient', authorization.lookupClient.bind(authorization));
 
+//
 // create user and client records
-oauth2Server.authentication.users.add('sander', cred, function(err, id, userData) {
-  oauth2Server.authorization.createClient('client', 'confidential',
+//
+var cred = {username: 'sander', password: 'test'};
+authentication.users.add('sander', cred, function(err, id, userData) {
+  authorization.createClient('client', 'confidential',
   ['http://localhost:9090/foo'], 'This is the test client', function(err, client) {
     console.log('userdata: ', userData);
     console.log('client.id: ', client.id);
   });
 });
 
+//
+// Create HTTP/S router
+//
 var router = new director.http.Router().configure({async: true});
 
 //
@@ -50,13 +65,13 @@ router.post('/oauth2/access_token', function(next) {
 // authentication plugin endpoints
 //
 router.get('/login', function(next) {
-  oauth2Server.authentication.loginEndpoint(this.req, this.res, next);
+  authentication.loginEndpoint(this.req, this.res, next);
 });
 router.post('/login', function(next) {
-  oauth2Server.authentication.loginEndpoint(this.req, this.res, next);
+  authentication.loginEndpoint(this.req, this.res, next);
 });
 router.get('/logout', function(next) {
-  oauth2Server.authentication.logoutEndpoint(this.req, this.res, next);
+  authentication.logoutEndpoint(this.req, this.res, next);
 });
 
 //
@@ -71,7 +86,9 @@ router.post('/foo', function () {
   this.res.end('hello world post\n');
 });
 
-
+//
+// Start the HTTP/S server
+//
 var server = union.createServer({
   before: [
     function(req, res, next) {
@@ -86,7 +103,7 @@ var server = union.createServer({
     }
   ]
 });
-
 server.listen(9090);
+
 console.log('Integrated example with all OAuth2 endpoints running on 9090');
 console.log("http://development:9090/login?next=http://development:9090/foo&state=statetest");

@@ -48,7 +48,78 @@ Authpack user documentation is still very much a work in progress. We'll be acti
 
 # Authpack API
 
-*To be added*
+*To be expanded*
+
+## OAuth2 Authorization-server events
+
+The OAuth2 Authorization-server emits events when it requires information from 'plugins'. The following events are emitted:
+
+### 'enforceLogin'
+
+Before showing authorization page, make sure the user is logged in. If not request login with given callback url.
+This function is called when the OAuth2 core wants to know if this user is already logged in and if so what its
+user_id is. If not logged in the users needs to get a login page and after login needs to return to `cb_url` to
+resume the current client OAuth2 authorization flow.
+
+Event parameters:
+
+  * `req`:,
+  * `res`:,
+  * `authorize_url`:,
+  * `options`:,
+  *  next`: function(user_id, authorize_url)
+
+### authorizeScope
+
+Check with the authorization service that the given scopes are authorized for the given client_id. If not all scopes are authorized,
+the resource owner gets a authorization page that returns to `cb_url` to resume the current client OAuth2 authorization flow.
+
+Event parameters:
+
+  * `req`:
+  * `res`:
+  * `cb_url`: URL to be called to get back to this function
+  * `options`: The cleaned Authorization endpoint parameters
+  * `next`: Function to execute if all given scopes are authorized or if the resource owner allows a selection of scopes. Must be called with a string of authorized scopes as argument.  
+
+### generateCode
+
+Generate grant code for the given user and client. This event is emitted when the core OAuth2 code wants a grant to be saved for later retrieval using the `lookupGrant` function and administrative use.
+
+Event parameters:
+
+  * `options`: The cleaned parameters that can be used to create a code grant
+  * `refreshType`: If the requested code is a code type then false. If refresh type then true.
+  * `next`: Function to execute next. Called with `err` and/or generated `code` grant
+
+### checkCode
+
+Find the user_id, client_id, scope for a particular code grant given to a client.
+This function is called when the client tries to swap a code/refresh_token grant for an access token. 
+
+Event parameters:
+
+ * `code`:
+ * `next`: Function to callback. Call with `err, user`. `err` if something went wrong, `user` user id who authorized this grant 
+
+### generateAccessToken
+
+Generate an access token from the given parameters
+
+Event parameters:
+
+  * `options`: Checked OAuth2 request options. user_id, client_id are used by this function
+  * `next`: Function to execute when ready with err, access_token, token_type and expires_in as arguments  
+
+### lookupClient
+
+Retrieve the client data object with the given client id
+
+Event parameters:
+
+ * `id`: The id of the client who's data object needs to be retrieved
+ * `next`: Callback function called with err and retrieved client data object
+ 
 
 
 Documentation License

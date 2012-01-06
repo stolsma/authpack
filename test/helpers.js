@@ -29,18 +29,27 @@ helpers.startTestServer = function(extraContext) {
   var context = {
     topic: function() {
       var self = this,
-          oauth2Server = new oauth2.AuthorizationServer({
-            authentication: new oauth2.AuthenticationPlugin(),
-            authorization: new oauth2.AuthorizationPlugin()
-          }),
+          authentication = new oauth2.AuthenticationPlugin(),
+          authorization = new oauth2.AuthorizationPlugin(),
+          oauth2Server = new oauth2.AuthorizationServer(),
           resourceServer = new oauth2.ResourceServer();
-        
-      helpers.startServer(resourceServer, helpers.createRouter(oauth2Server));
       
-      oauth2Server.authentication.users.add('sander', credentials , function(err, id, userData) {
+      // bind plugins to OAuth2 server events
+      oauth2Server.on('enforceLogin', authentication.enforceLogin.bind(authentication));
+      oauth2Server.on('authorizeScope', authorization.authorizeScope.bind(authorization));
+      oauth2Server.on('generateCode', authorization.generateCode.bind(authorization));
+      oauth2Server.on('checkCode', authorization.checkCode.bind(authorization));
+      oauth2Server.on('generateAccessToken', authorization.generateAccessToken.bind(authorization));
+      oauth2Server.on('lookupClient', authorization.lookupClient.bind(authorization));
+      
+      // and start listening on the http/s endpoints
+      helpers.startServer(resourceServer, helpers.createRouter(oauth2Server, authentication, authorization));
+      
+      // add one test user and two test clients
+      authentication.users.add('sander', credentials , function(err, id, userData) {
         if (err) return self.callback(err);
-        oauth2Server.authorization.createClient('client', 'confidential',  ['http://localhost:9090/foo'], 'This is the test client',  function(err, confClient) {
-          oauth2Server.authorization.createClient('client', 'public',  ['http://localhost:9090/foo'], 'This is the test client',  function(err, publicClient) {
+        authorization.createClient('client', 'confidential',  ['http://localhost:9090/foo'], 'This is the test client',  function(err, confClient) {
+          authorization.createClient('client', 'public',  ['http://localhost:9090/foo'], 'This is the test client',  function(err, publicClient) {
              self.callback(err, credentials, confClient, publicClient, oauth2);
           });
         });
@@ -64,7 +73,7 @@ helpers.startTestServer = function(extraContext) {
  * Create a test router for given OAuth2 Server
  * @param {} oauth2Server OAuth2 server code
  */
-helpers.createRouter = function(oauth2Server, options) {
+helpers.createRouter = function(oauth2Server, authentication, authorization, options) {
   var router;
   options = options || {};
   
@@ -107,15 +116,15 @@ helpers.createRouter = function(oauth2Server, options) {
   // authentication plugin endpoints
   //
   router.get('/login', function(next) {
-    oauth2Server.authentication.loginEndpoint(this.req, this.res, next);
+    authentication.loginEndpoint(this.req, this.res, next);
   });
 
   router.post('/login', function(next) {
-    oauth2Server.authentication.loginEndpoint(this.req, this.res, next);
+    authentication.loginEndpoint(this.req, this.res, next);
   });
 
   router.get('/logout', function(next) {
-    oauth2Server.authentication.logoutEndpoint(this.req, this.res, next);
+    authentication.logoutEndpoint(this.req, this.res, next);
   });
 
   return router;
