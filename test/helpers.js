@@ -423,11 +423,11 @@ TestClient.prototype.performCodeFlowAuthorization = function(auth_key, options) 
     if (res.statusCode === 200) {
       // try to get the code flow result
       promise.codeFlowResult = qs.parse(res.request.uri.query);
-      promise.codeFlowBody = body === 'hello world get';
+      promise.codeFlowBody = (body === 'hello world get' && !promise.codeFlowResult.error);
 
       // check for an error msg returned
       promise.errorParams = qs.parse(res.request.uri.query);
-      promise.errorBody = body === 'hello world get';
+      promise.errorBody = (body === 'hello world get' && promise.errorParams.error);
     }
 
     if (res.statusCode === 400) {

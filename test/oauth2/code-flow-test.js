@@ -42,6 +42,7 @@ vows.describe('OAuth2/code-flow').addBatch({
           },
           "request is handled correctly": function(err, promise) {
             assert.isNull(err);
+            if (promise.errorBody) console.error(promise.errorParams);
             assert.isTrue(promise.codeFlowBody);
           },
           "correct 'state' is returned": function(err, promise) {
