@@ -16,6 +16,7 @@ var assert = require('assert'),
     
 var EventEmitter = require('events').EventEmitter,
     authpack = require('../lib/authpack'),
+    mixin = authpack.utils.mixin,
     oauth2 = authpack.oauth2,
     request = authpack.utils.request,
     helpers = exports;
@@ -62,7 +63,7 @@ helpers.startTestServer = function(extraContext) {
   };
   
   if (extraContext) {
-    helpers.mixin(context, extraContext);
+    mixin(context, extraContext);
   }
   
   return context;
@@ -194,7 +195,7 @@ var TestClient = helpers.TestClient = function(options) {
   };
   
   // copy options to this instance
-  helpers.mixin(this, options);
+  mixin(this, options);
 };
 
 /**
@@ -211,7 +212,7 @@ TestClient.prototype.url = function(path, qs, hash) {
     query: qs || {},
     hash: hash || ''
   };
-  helpers.mixin(urlParts, this.server);
+  mixin(urlParts, this.server);
   return url.format(urlParts);
 };
 
@@ -570,14 +571,7 @@ function getAuthorizationKey(body) {
   return url.parse(body, true).query.authorization;
 }
 
-
-/**
- * ### function mixin (target source)
- * Copies enumerable properties from `source` onto `target` and returns the resulting object.
- */
-helpers.mixin = function(target, source) {
-  Object.keys(source).forEach(function (attr) {
-    target[attr] = source[attr];
-  });
-  return target;
-};
+//
+// Share mixin with tests
+//
+helpers.mixin = mixin;
