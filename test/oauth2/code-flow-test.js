@@ -19,7 +19,7 @@ vows.describe('OAuth2/code-flow').addBatch({
               client_id: client.id,
               client_secret: client.secret,
               redirect_uri: client.redirect_uris[0],
-              scope: 'test',
+              scope: 'test2',
               state: 'statetest'
             };
         return helpers.TestClient().getLoginPage(codeParameters, 'GET');
@@ -33,6 +33,7 @@ vows.describe('OAuth2/code-flow').addBatch({
         },
         "check if authorization page is presented": function(err, promise) {
           assert.isNull(err);
+          if (!promise.authorizationPage) console.error(promise.body);
           assert.isTrue(promise.authorizationPage);
           assert.isString(promise.authorizationKey);
         },

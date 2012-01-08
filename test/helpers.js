@@ -51,12 +51,14 @@ helpers.startTestServer = function(extraContext) {
         if (err) return self.callback(err);
         authorization.createClient('client', 'confidential',  ['http://localhost:9090/foo'], 'This is the test client',  function(err, confClient) {
           authorization.createClient('client', 'public',  ['http://localhost:9090/foo'], 'This is the test client',  function(err, publicClient) {
-             self.callback(err, credentials, confClient, publicClient, oauth2);
+            authorization.addAuthorization(userData.username, confClient.id, 'test' , function(err, authData) {
+              self.callback(err, credentials, confClient, publicClient, authData, oauth2);
+            });
           });
         });
       });
     },
-    "it should be properly created": function(credentials, client, oauth2) {
+    "it should be properly created": function(credentials, confClient, publicClient, authData, oauth2) {
       // TODO Implement authorizationServer creation test
       assert.isTrue(!!oauth2);
     }

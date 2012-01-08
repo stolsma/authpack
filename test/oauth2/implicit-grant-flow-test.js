@@ -19,7 +19,7 @@ vows.describe('OAuth2/implicit-grant-flow').addBatch({
               response_type: 'token',
               client_id: client.id,
               redirect_uri: client.redirect_uris[0],
-              scope: 'test',
+              scope: 'test2',
               state: 'statetest'
             };
         return helpers.TestClient().getLoginPage(codeParameters, 'GET');
@@ -33,6 +33,7 @@ vows.describe('OAuth2/implicit-grant-flow').addBatch({
         },
         "check if authorization page is presented": function(err, promise) {
           assert.isNull(err);
+          if (!promise.authorizationPage) console.error(promise.body);
           assert.isTrue(promise.authorizationPage);
           assert.isString(promise.authorizationKey);
         },
@@ -53,7 +54,7 @@ vows.describe('OAuth2/implicit-grant-flow').addBatch({
             assert.equal(promise.implicitGrantResult.expires_in, 3600);
           },
           "correct 'scope' is returned": function(err, promise) {
-            assert.equal(promise.implicitGrantResult.scope, 'test');
+            assert.equal(promise.implicitGrantResult.scope, promise.flowOptions.scope);
           },
           "correct 'state' is returned": function(err, promise) {
             assert.equal(promise.implicitGrantResult.state, promise.flowOptions.state);
