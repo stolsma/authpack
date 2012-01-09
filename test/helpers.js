@@ -51,8 +51,13 @@ helpers.startTestServer = function(extraContext) {
         if (err) return self.callback(err);
         authorization.createClient('client', 'confidential',  ['http://localhost:9090/foo'], 'This is the test client',  function(err, confClient) {
           authorization.createClient('client', 'public',  ['http://localhost:9090/foo'], 'This is the test client',  function(err, publicClient) {
-            authorization.addAuthorization(userData.username, confClient.id, 'test' , function(err, authData) {
-              self.callback(err, credentials, confClient, publicClient, authData, oauth2);
+            var scope = {
+              user_id: userData.username,
+              client_id: confClient.id,
+              scope: 'test'
+            };
+            authorization.addAuthorization(scope.user_id, scope.client_id, scope.scope , function(err) {
+              self.callback(err, credentials, confClient, publicClient, scope, oauth2);
             });
           });
         });
@@ -158,20 +163,6 @@ helpers.startServer = function(resourceServer, router, port) {
   return server;
 };
 
-
-//
-//
-// General AuthorizationServer functions
-//
-//
-
-helpers.createClient = function(oauth2, name, redirect_uri, info, next) {
-  oauth2.authorizationServer.clients.create(name, redirect_uri, info, function(data) {
-    return next(data);
-  });
-};
-
-
 //
 //
 // TestClient Class
@@ -198,6 +189,8 @@ var TestClient = helpers.TestClient = function(options) {
   
   // copy options to this instance
   mixin(this, options);
+  
+  this.cookieJar = this.cookieJar || request.jar();
 };
 
 /**
@@ -221,13 +214,16 @@ TestClient.prototype.url = function(path, qs, hash) {
 /**
  * Do a HTTP request with the client specific `request` function and call callback when request returned
  * @param {Object} reqOptions Request options to use
- * @param {Function} callback Callback function to call when ready. Will be called with err, res, body.
+ * @param {Function} callback Callback function to call when ready. Will be called with err, res (http.ClientResponse),
+ * body.
  */
 TestClient.prototype.request = function(reqOptions, callback) {
   var promise = new EventEmitter();
   promise.client = this;
 
-  request(reqOptions, function(err, res, body) {
+  reqOptions.jar = this.cookieJar;
+
+  request.requestRedirects(reqOptions, function(err, res, body) {
     promise.res = res;
     promise.body = body;
     promise.statusCode = res.statusCode;
@@ -390,8 +386,22 @@ TestClient.prototype.getAuthorizationPage = function(options, auth_key, credenti
       promise.authorizationPage = body.indexOf(partial) > -1;
       that.authorizationKey = promise.authorizationKey = getAuthorizationKey(body);
 
+      // try to get the code flow result
+      promise.codeFlowResult = qs.parse(res.request.uri.query);
+      promise.codeFlowBody = (body === 'hello world get' &&
+                              !promise.codeFlowResult.error &&
+                              promise.flowOptions.response_type === 'code');
+      
+      // try to get the access token request result
+      promise.implicitGrantResult = (res.request.uri.hash) ? qs.parse(res.request.uri.hash.slice(1)) : {};
+      promise.implicitGrantBody = (body === 'hello world get' &&
+                                   !promise.implicitGrantResult.error &&
+                                   promise.flowOptions.response_type === 'token');
+        
       // check for an error msg returned
-      promise.errorParams = qs.parse(res.request.uri.query);
+      promise.errorParams = (promise.flowOptions.response_type === 'code') ? 
+                              promise.codeFlowResult :
+                              promise.implicitGrantResult;
       promise.errorBody = body === 'hello world get';
     }
     
