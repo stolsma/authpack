@@ -16,20 +16,10 @@ var oauth2 = require('../lib/authpack').oauth2;
 //
 // create the OAuth2 Authentication server and plugins
 //
-var authentication = new oauth2.AuthenticationPlugin(),
-    authorization = new oauth2.AuthorizationPlugin(),
-    oauth2Server = new oauth2.AuthorizationServer(),
+var oauth2Server = new oauth2.AuthorizationServer(),
+    authentication = new oauth2.AuthenticationPlugin(oauth2Server),
+    authorization = new oauth2.AuthorizationPlugin(oauth2Server),
     resourceServer = new oauth2.ResourceServer();
-
-//
-// bind plugins to OAuth2 server events
-//
-oauth2Server.on('enforceLogin', authentication.enforceLogin.bind(authentication));
-oauth2Server.on('authorizeScope', authorization.authorizeScope.bind(authorization));
-oauth2Server.on('generateCode', authorization.generateCode.bind(authorization));
-oauth2Server.on('checkCode', authorization.checkCode.bind(authorization));
-oauth2Server.on('generateAccessToken', authorization.generateAccessToken.bind(authorization));
-oauth2Server.on('lookupClient', authorization.lookupClient.bind(authorization));
 
 //
 // create user and client records
