@@ -24,7 +24,8 @@ var secret = 'Dit_is_een_secret_63838^&&***W(',
                         'eyJpc3MiOjJqb2UiLCJleHAiOjEzMDA4MTkzODAsImh0dHA6Ly9leGFtcGxlLmNvbS9pc19yb290Ijp0cnVlfQ.' +
                         'fXRcG-MQ2n8b4WKwCQFKkhZFkyHgDTOHMD1ZheUrM6Y';
 
-// private key generation: openssl genrsa -out key.pem 2048
+// private key generation in PEM format: openssl genrsa -out key.pem 2048
+// public key generation from private key in PEM format: openssl rsa -in key.pem -out public.pem -outform PEM -pubout
 // public key certificate generation: openssl req -key key.pem -new -x509 -out cert.pem
 var signingKey = {
       privateKey: new Buffer('-----BEGIN RSA PRIVATE KEY-----\n'+
@@ -54,7 +55,16 @@ var signingKey = {
                              'vMI7B6Qv2RDg8P4lbhUo5UTq9RbZxZfZz/Jd+p0fuhNpSTTdvDWeM6bkuM2ut/X7\n'+
                              '+4tbqGQj3klMcuTJSQ9nvShDgADzDxHhm95baAv0rs8q0ncotqbD0ms=\n'+
                              '-----END RSA PRIVATE KEY-----'),
-      publicKey:  new Buffer('-----BEGIN CERTIFICATE-----\n'+
+      publicKey: new Buffer('-----BEGIN PUBLIC KEY-----\n'+
+                            'MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAsqfRTcIT+CDIxD+ApJW6\n'+
+                            'sJDTC8R9KBCvPNAZRJkMlC0SH2U0QEwjFwIcur9V9PyBNATZc6joknIW26tGY5WO\n'+
+                            'CWtm/gNEY+56UnJuRD4hqzUzGjwUPg6DVgAPAJPjYQunS6sLtvMl57SFISAAR1Pz\n'+
+                            '9UyGI5bLp9GI3ecIOAqRzkdQLxpPfAi1xc5wYgfcaIHVSiP4SIpYqpiQXpkFpunf\n'+
+                            '/hVthy0q2rOORFMqQZWOpvCooCeABZEwu7KsEzy+2JHa2q97MubQRKvlOgkfPH5B\n'+
+                            '7WSsu9CoDN6RtFaEXR2kf37DmBYrmyFS8+g9+7nIT5gkrQrz52RgW6bT50AQMlfY\n'+
+                            '4QIDAQAB\n'+
+                            '-----END PUBLIC KEY-----')
+/*      publicKey: new Buffer('-----BEGIN CERTIFICATE-----\n'+
                              'MIIDVzCCAj+gAwIBAgIJAPJKlSGRaXw4MA0GCSqGSIb3DQEBBQUAMEIxCzAJBgNV\n'+
                              'BAYTAlhYMRUwEwYDVQQHDAxEZWZhdWx0IENpdHkxHDAaBgNVBAoME0RlZmF1bHQg\n'+
                              'Q29tcGFueSBMdGQwHhcNMTIwMTEzMTgzNzUwWhcNMTIwMjEyMTgzNzUwWjBCMQsw\n'+
@@ -73,7 +83,7 @@ var signingKey = {
                              'etzkwX5nblIBf0auFixBeot2/Vr9aocrR7e1t8i281ZgpcNeHbhkfTyVMQBCWg07\n'+
                              'bEE6tbVNQn3XQ2Kkf4JH9klGMFy56WgunlahfAnaVQmnz7mCMGlYuGjAQpMgO8yl\n'+
                              'hJKWKxNWSwC27pYYEyi+vaO8qy5QIu+9egvT3T96NAMfCxhwgdxIf/cvzg==\n'+
-                             '-----END CERTIFICATE-----\n')
+                             '-----END CERTIFICATE-----\n') */
 };
 
 
