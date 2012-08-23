@@ -1,3 +1,4 @@
+[![build status](https://secure.travis-ci.org/stolsma/authpack.png)](http://travis-ci.org/stolsma/authpack)
 # Authpack
 
 *Package of distributed client and server OAuth2 API's*
